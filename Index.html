@@ -121,6 +121,15 @@
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #FFD700; cursor: pointer; margin-top: -8px; box-shadow: 0 0 15px rgba(255,215,0,0.9); }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; cursor: pointer; background: #222; border-radius: 4px; border: 1px solid #000; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+
+        @keyframes screenFadeIn { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+        .screen-fade-in { animation: screenFadeIn 0.35s ease both; }
+
+        @keyframes spin360 { to { transform: rotate(360deg); } }
+        .spinner-ring { border: 4px solid rgba(255,215,0,0.15); border-top-color: #FFD700; border-radius: 50%; animation: spin360 0.9s linear infinite; }
+
+        .leaderboard-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+        .leaderboard-row.is-new { border-color: rgba(255,215,0,0.6); background: rgba(255,215,0,0.08); box-shadow: 0 0 12px rgba(255,215,0,0.25); }
     </style>
 </head>
 <body id="main-body">
@@ -186,8 +195,27 @@
             </div>
         </div>
 
+        <!-- LOADING / BUFFERING -->
+        <div id="screen-loading" class="screen-fade-in hidden absolute inset-0 flex-col items-center justify-center glass-panel pointer-events-auto z-[70]">
+            <div class="spinner-ring w-16 h-16 mb-8"></div>
+            <h2 class="text-2xl font-black mb-2 text-gold-gradient uppercase tracking-[0.2em] text-center">Tuning Up</h2>
+            <p id="loading-track-name" class="text-gray-400 text-xs font-bold uppercase tracking-[0.3em] mb-10">Loading Track</p>
+            <button onclick="gameEngine.cancelLoad()" class="bg-gray-800 border border-gray-600 text-gray-400 px-8 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:text-white hover:border-gray-400 active:scale-95 transition-all">Cancel</button>
+        </div>
+
+        <!-- AUDIO ERROR -->
+        <div id="screen-audio-error" class="screen-fade-in hidden absolute inset-0 flex-col items-center justify-center glass-panel pointer-events-auto z-[70] px-6 text-center">
+            <svg class="w-16 h-16 text-[#DA291C] mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path></svg>
+            <h2 class="text-3xl font-black mb-3 text-[#DA291C] uppercase tracking-wider">Track Failed To Load</h2>
+            <p class="text-gray-400 text-sm font-bold mb-10 max-w-sm">Check your connection and try again, or pick a different song.</p>
+            <div class="flex flex-col gap-4 w-64">
+                <button onclick="gameEngine.retryLoad()" class="bg-gradient-to-b from-[#00B140] to-[#007029] border-2 border-[#00ff5d] text-white py-4 rounded-xl text-lg font-black uppercase shadow-[0_10px_30px_rgba(0,177,64,0.6)] hover:brightness-110 active:scale-95 transition-all">Retry</button>
+                <button onclick="ui.showStartMenu()" class="bg-gray-800 border border-gray-500 text-white py-3 rounded-xl text-sm font-bold uppercase hover:bg-gray-700 active:scale-95 transition-all shadow-lg">Back to Hub</button>
+            </div>
+        </div>
+
         <!-- PAUSE MENU -->
-        <div id="screen-pause" class="hidden absolute inset-0 flex-col items-center justify-center glass-panel pointer-events-auto z-[60]">
+        <div id="screen-pause" class="screen-fade-in hidden absolute inset-0 flex-col items-center justify-center glass-panel pointer-events-auto z-[60]">
             <h2 class="text-6xl font-black mb-10 text-white uppercase tracking-wider drop-shadow-lg">PAUSED</h2>
             <div class="flex flex-col gap-4 w-64">
                 <button onclick="gameEngine.resumeGame()" class="bg-gradient-to-b from-[#00B140] to-[#007029] border-2 border-[#00ff5d] text-white py-4 rounded-xl text-xl font-black uppercase shadow-[0_10px_30px_rgba(0,177,64,0.6)] hover:brightness-110 active:scale-95 transition-all">Resume</button>
@@ -197,7 +225,7 @@
         </div>
 
         <!-- SETTINGS MENU -->
-        <div id="screen-settings" class="hidden absolute inset-0 flex-col items-center justify-center glass-panel pointer-events-auto z-[60] px-6">
+        <div id="screen-settings" class="screen-fade-in hidden absolute inset-0 flex-col items-center justify-center glass-panel pointer-events-auto z-[60] px-6">
             <button onclick="ui.toggleFullScreen()" class="fs-btn-glow absolute top-6 right-6 flex items-center gap-2 bg-[#FFD700]/15 border-2 border-[#FFD700] rounded-full px-4 py-2 text-[#FFD700] hover:bg-[#FFD700] hover:text-black active:scale-90 transition-all shadow-[0_0_20px_rgba(255,215,0,0.6)] animate-pulse">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
                 <span class="fs-text text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Full Screen</span>
@@ -218,12 +246,20 @@
                     </div>
                     <input type="range" id="setting-speed" min="0.5" max="1.5" step="0.1" value="1" oninput="ui.updateSettingsDisplay()">
                 </div>
+                <div class="w-full">
+                    <div class="flex justify-between mb-3">
+                        <label class="text-xs font-black uppercase tracking-widest text-gray-300">Audio Sync Offset</label>
+                        <span id="set-offset-val" class="text-[#DA291C] font-black text-sm">0ms</span>
+                    </div>
+                    <input type="range" id="setting-offset" min="-150" max="150" step="5" value="0" oninput="ui.updateSettingsDisplay()">
+                    <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-2">Notes hitting late? Increase. Hitting early? Decrease.</p>
+                </div>
             </div>
             <button onclick="ui.saveSettingsAndExit()" class="bg-gray-800 border-2 border-gray-500 text-white px-12 py-4 rounded-full font-bold uppercase tracking-widest hover:border-[#FFD700] hover:text-[#FFD700] active:scale-95 transition-all shadow-[0_10px_25px_rgba(0,0,0,0.8)]">Save & Close</button>
         </div>
 
         <!-- MAIN MENU -->
-        <div id="screen-start" class="absolute inset-0 flex flex-col items-center justify-center glass-panel pointer-events-auto z-50">
+        <div id="screen-start" class="screen-fade-in absolute inset-0 flex flex-col items-center justify-center glass-panel pointer-events-auto z-50">
             <button onclick="ui.toggleFullScreen()" class="fs-btn-glow absolute top-6 right-6 flex items-center gap-2 bg-[#FFD700]/15 border-2 border-[#FFD700] rounded-full px-4 py-2 text-[#FFD700] hover:bg-[#FFD700] hover:text-black active:scale-90 transition-all shadow-[0_0_20px_rgba(255,215,0,0.6)] animate-pulse">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
                 <span class="fs-text text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Full Screen</span>
@@ -243,7 +279,7 @@
         </div>
 
         <!-- CAREER MODE -->
-        <div id="screen-career" class="hidden absolute inset-0 flex-col items-center glass-panel py-12 px-4 pointer-events-auto z-50">
+        <div id="screen-career" class="screen-fade-in hidden absolute inset-0 flex-col items-center glass-panel py-12 px-4 pointer-events-auto z-50">
             <h2 class="text-5xl font-black mb-2 text-gold-gradient uppercase tracking-wider drop-shadow-lg text-center">Treble Tour</h2>
             <p class="text-gray-300 font-bold mb-8 uppercase text-[10px] tracking-[0.3em] bg-black/60 px-5 py-2 rounded-full border border-gray-700 shadow-md">Conquer matches to unlock tracks</p>
             <div id="career-list" class="w-full max-w-lg flex-1 overflow-y-auto space-y-4 pb-32 scroll-hide list-fade-mask px-2"></div>
@@ -253,7 +289,7 @@
         </div>
 
         <!-- QUICK PLAY TRACKS -->
-        <div id="screen-tracks" class="hidden absolute inset-0 flex-col items-center glass-panel py-12 px-4 pointer-events-auto z-50">
+        <div id="screen-tracks" class="screen-fade-in hidden absolute inset-0 flex-col items-center glass-panel py-12 px-4 pointer-events-auto z-50">
             <h2 class="text-5xl font-black mb-8 text-white uppercase tracking-wider drop-shadow-lg text-center" style="-webkit-text-stroke: 1px rgba(0,0,0,0.5);">Setlist</h2>
             <div id="track-list" class="w-full max-w-lg flex-1 overflow-y-auto space-y-3 pb-32 scroll-hide list-fade-mask px-2"></div>
             <div class="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-black via-black/95 to-transparent flex justify-center pointer-events-none">
@@ -262,7 +298,7 @@
         </div>
 
         <!-- STAGE SELECTOR -->
-        <div id="screen-stages" class="hidden absolute inset-0 flex-col items-center glass-panel py-12 px-4 pointer-events-auto z-50">
+        <div id="screen-stages" class="screen-fade-in hidden absolute inset-0 flex-col items-center glass-panel py-12 px-4 pointer-events-auto z-50">
             <h2 class="text-5xl font-black mb-8 text-white uppercase tracking-wider drop-shadow-lg text-center" style="-webkit-text-stroke: 1px rgba(0,0,0,0.5);">Select Arena</h2>
             <div id="stage-list" class="w-full max-w-lg flex-1 flex flex-col gap-6 overflow-y-auto pb-32 scroll-hide list-fade-mask px-2"></div>
             <div class="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-black via-black/95 to-transparent flex justify-center pointer-events-none">
@@ -271,7 +307,7 @@
         </div>
 
         <!-- GAME OVER -->
-        <div id="screen-gameover" class="hidden absolute inset-0 flex-col items-center justify-center glass-panel pointer-events-auto z-50 px-4">
+        <div id="screen-gameover" class="screen-fade-in hidden absolute inset-0 flex-col items-center justify-center glass-panel pointer-events-auto z-50 px-4">
             <div id="new-highscore-banner" class="hidden absolute top-0 w-full bg-gradient-to-r from-transparent via-[#FFD700] to-transparent text-black font-black text-center py-2 uppercase tracking-[0.3em] shadow-[0_0_30px_#FFD700] animate-pulse z-50">
                 New High Score!
             </div>
@@ -305,6 +341,11 @@
                 <div class="flex justify-between items-center text-gray-300 font-bold">
                     <span class="text-xs uppercase tracking-widest">Max Combo:</span><span id="end-combo" class="text-[#FFD700] text-xl font-black">x0</span>
                 </div>
+            </div>
+
+            <div id="end-leaderboard" class="hud-glass p-5 w-full max-w-sm mb-8 border-t-4 border-[#FFD700]">
+                <div class="text-[#FFD700] text-[10px] font-black uppercase tracking-[0.3em] mb-3 text-center">Top 5 Scores</div>
+                <div id="end-leaderboard-list" class="flex flex-col gap-2"></div>
             </div>
 
             <div id="game-over-buttons" class="flex flex-col gap-4 w-full max-w-sm opacity-0 pointer-events-none transition-opacity duration-500">
@@ -344,6 +385,8 @@
             { id: 'bruno_magnifico', name: 'Magnifico (Bruno)', url: 'https://iili.io/CFSZbEB.jpg', vpX: 0.50, vpY: 0.54, hitY: 0.92, targetsX: [0.18, 0.50, 0.82] }
         ];
 
+        const STREAK_MILESTONES = [10, 25, 50, 100, 150, 200, 300, 400, 500];
+
         const baseURL = "https://raw.githubusercontent.com/ab19902020/united-rhythm-audio/main/";
         
         // 13-Track Library ("Message in a Bottle" Removed completely)
@@ -382,8 +425,43 @@
         let storageData = JSON.parse(localStorage.getItem('united_rhythm_save')) || {};
         if (!storageData.highScores) storageData.highScores = {};
         if (!storageData.careerLevel) storageData.careerLevel = 1;
-        if (!storageData.settings) storageData.settings = { volume: 1.0, speedMult: 1.0 };
+        if (!storageData.settings) storageData.settings = { volume: 1.0, speedMult: 1.0, audioOffset: 0 };
+        if (storageData.settings.audioOffset === undefined) storageData.settings.audioOffset = 0;
+
+        // Migrate legacy highScores (plain number) into {best, history:[]} leaderboard records
+        Object.keys(storageData.highScores).forEach(id => {
+            let entry = storageData.highScores[id];
+            if (typeof entry === 'number') {
+                storageData.highScores[id] = { best: entry, history: [{ score: entry, accuracy: null, grade: '', date: null }] };
+            } else if (!entry.history) {
+                entry.history = [{ score: entry.best, accuracy: null, grade: '', date: null }];
+            }
+        });
+
         function saveGame() { localStorage.setItem('united_rhythm_save', JSON.stringify(storageData)); }
+
+        function calcGrade(stats) {
+            let total = stats.perfect + stats.good + stats.miss;
+            let accuracy = total > 0 ? Math.round(((stats.perfect + (stats.good * 0.5)) / total) * 100) : 0;
+            let grade = 'D', gradeColor = '#9ca3af';
+            if (accuracy === 100) { grade = 'SS'; gradeColor = '#00ffff'; }
+            else if (accuracy >= 95) { grade = 'S'; gradeColor = '#FFD700'; }
+            else if (accuracy >= 90) { grade = 'A'; gradeColor = '#00B140'; }
+            else if (accuracy >= 80) { grade = 'B'; gradeColor = '#42a5f5'; }
+            else if (accuracy >= 70) { grade = 'C'; gradeColor = '#DA291C'; }
+            return { accuracy, grade, gradeColor };
+        }
+
+        function recordScore(trackId, score, accuracy, grade) {
+            if (!storageData.highScores[trackId]) storageData.highScores[trackId] = { best: 0, history: [] };
+            const record = storageData.highScores[trackId];
+            const isNewBest = score > record.best;
+            if (isNewBest) record.best = score;
+            record.history.push({ score, accuracy, grade, date: Date.now() });
+            record.history.sort((a, b) => b.score - a.score);
+            record.history = record.history.slice(0, 5);
+            return isNewBest;
+        }
 
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const audioCtx = new AudioContext();
@@ -436,7 +514,7 @@
         let isCareerMatch = false; let currentCareerLevel = 1;
 
         const ui = {
-            screens: { start: document.getElementById('screen-start'), tracks: document.getElementById('screen-tracks'), game: document.getElementById('screen-game'), gameover: document.getElementById('screen-gameover'), career: document.getElementById('screen-career'), stages: document.getElementById('screen-stages'), pause: document.getElementById('screen-pause'), settings: document.getElementById('screen-settings') },
+            screens: { start: document.getElementById('screen-start'), tracks: document.getElementById('screen-tracks'), game: document.getElementById('screen-game'), gameover: document.getElementById('screen-gameover'), career: document.getElementById('screen-career'), stages: document.getElementById('screen-stages'), pause: document.getElementById('screen-pause'), settings: document.getElementById('screen-settings'), loading: document.getElementById('screen-loading'), audioError: document.getElementById('screen-audio-error') },
             controls: document.getElementById('touch-controls'),
             
             hideAll() { 
@@ -469,19 +547,23 @@
                 this.hideAll(); this.screens.settings.classList.remove('hidden'); this.screens.settings.classList.add('flex');
                 document.getElementById('setting-volume').value = storageData.settings.volume;
                 document.getElementById('setting-speed').value = storageData.settings.speedMult;
+                document.getElementById('setting-offset').value = storageData.settings.audioOffset || 0;
                 this.updateSettingsDisplay();
             },
 
             updateSettingsDisplay() {
                 const vol = document.getElementById('setting-volume').value;
                 const spd = document.getElementById('setting-speed').value;
+                const off = parseInt(document.getElementById('setting-offset').value, 10);
                 document.getElementById('set-vol-val').innerText = Math.round(vol * 100) + '%';
                 document.getElementById('set-speed-val').innerText = parseFloat(spd).toFixed(1) + 'x';
+                document.getElementById('set-offset-val').innerText = (off > 0 ? '+' : '') + off + 'ms';
             },
 
             saveSettingsAndExit() {
                 storageData.settings.volume = parseFloat(document.getElementById('setting-volume').value);
                 storageData.settings.speedMult = parseFloat(document.getElementById('setting-speed').value);
+                storageData.settings.audioOffset = parseInt(document.getElementById('setting-offset').value, 10);
                 saveGame(); this.showStartMenu();
             },
 
@@ -543,7 +625,7 @@
                 this.hideAll(); this.screens.tracks.classList.remove('hidden'); this.screens.tracks.classList.add('flex');
                 const container = document.getElementById('track-list'); container.innerHTML = '';
                 trackLibrary.forEach(track => {
-                    const score = storageData.highScores[track.id] || 0; 
+                    const score = (storageData.highScores[track.id] && storageData.highScores[track.id].best) || 0;
                     const diffColor = track.difficulty === 'Easy' ? 'text-[#00B140]' : track.difficulty === 'Medium' ? 'text-[#FFD700]' : 'text-[#DA291C]';
                     const diffBorder = track.difficulty === 'Easy' ? 'group-hover:border-[#00B140]' : track.difficulty === 'Medium' ? 'group-hover:border-[#FFD700]' : 'group-hover:border-[#DA291C]';
                     const diffIconColor = track.difficulty === 'Easy' ? 'group-hover:text-[#00B140]' : track.difficulty === 'Medium' ? 'group-hover:text-[#FFD700]' : 'group-hover:text-[#DA291C]';
@@ -576,26 +658,56 @@
             showPause() { this.screens.pause.classList.remove('hidden'); this.screens.pause.classList.add('flex'); },
             hidePause() { this.screens.pause.classList.remove('flex'); this.screens.pause.classList.add('hidden'); },
 
-            showGameOver(stats, trackName, wonCareerMatch, isNewHighScore) {
+            showLoading(trackName) {
+                this.hideAll(); this.screens.loading.classList.remove('hidden'); this.screens.loading.classList.add('flex');
+                document.getElementById('loading-track-name').innerText = trackName;
+            },
+
+            showAudioError() {
+                this.hideAll(); this.screens.audioError.classList.remove('hidden'); this.screens.audioError.classList.add('flex');
+            },
+
+            renderLeaderboard(trackId, justPlayedScore) {
+                const container = document.getElementById('end-leaderboard-list');
+                container.innerHTML = '';
+                const record = storageData.highScores[trackId];
+                const history = record ? record.history : [];
+                if (history.length === 0) {
+                    container.innerHTML = `<div class="text-gray-500 text-xs text-center py-2 uppercase tracking-widest">No scores yet</div>`;
+                    return;
+                }
+                history.forEach((entry, idx) => {
+                    const isThisRun = entry.score === justPlayedScore;
+                    const row = document.createElement('div');
+                    row.className = 'leaderboard-row' + (isThisRun ? ' is-new' : '');
+                    row.innerHTML = `<span class="text-gray-400 font-black text-xs w-6">#${idx + 1}</span>
+                        <span class="flex-1 text-white font-black text-sm">${entry.score}</span>
+                        ${entry.grade ? `<span class="text-[#FFD700] font-black text-xs">${entry.grade}</span>` : ''}`;
+                    container.appendChild(row);
+                });
+            },
+
+            showStreak(combo) {
+                const el = document.getElementById('hud-streak');
+                el.classList.remove('hit-text'); void el.offsetWidth;
+                el.innerText = `${combo} NOTE STREAK!`;
+                el.classList.add('hit-text');
+            },
+
+            showGameOver(stats, trackName, trackId, wonCareerMatch, isNewHighScore) {
                 this.hideAll(); this.screens.gameover.classList.remove('hidden'); this.screens.gameover.classList.add('flex');
-                
-                document.getElementById('end-score').innerText = stats.score; document.getElementById('end-combo').innerText = 'x' + stats.maxCombo; 
+
+                document.getElementById('end-score').innerText = stats.score; document.getElementById('end-combo').innerText = 'x' + stats.maxCombo;
                 document.getElementById('end-track-name').innerText = trackName;
                 document.getElementById('end-perfect').innerText = stats.perfect; document.getElementById('end-good').innerText = stats.good; document.getElementById('end-miss').innerText = stats.miss;
-                
-                let total = stats.perfect + stats.good + stats.miss;
-                let accuracy = total > 0 ? Math.round(((stats.perfect + (stats.good * 0.5)) / total) * 100) : 0;
+
+                let { accuracy, grade, gradeColor } = calcGrade(stats);
                 document.getElementById('end-accuracy').innerText = accuracy + '%';
 
-                let grade = 'D'; let gradeColor = '#9ca3af';
-                if (accuracy === 100) { grade = 'SS'; gradeColor = '#00ffff'; }
-                else if (accuracy >= 95) { grade = 'S'; gradeColor = '#FFD700'; }
-                else if (accuracy >= 90) { grade = 'A'; gradeColor = '#00B140'; }
-                else if (accuracy >= 80) { grade = 'B'; gradeColor = '#42a5f5'; }
-                else if (accuracy >= 70) { grade = 'C'; gradeColor = '#DA291C'; }
-                
                 const gradeEl = document.getElementById('end-grade');
                 gradeEl.innerText = grade; gradeEl.style.color = gradeColor; gradeEl.style.textShadow = `0 10px 30px ${gradeColor}`;
+
+                this.renderLeaderboard(trackId, stats.score);
 
                 const banner = document.getElementById('new-highscore-banner');
                 if (isNewHighScore) { banner.classList.remove('hidden'); } else { banner.classList.add('hidden'); }
@@ -689,10 +801,10 @@
             
             lanesHeld: [false, false, false], receptorGlow: [0, 0, 0], 
             cantonaPower: 0, cantonaActive: false,
-            
+
             bassIntensity: 0, vocalIntensity: 0,
-            multLevelUpEffect: 0, 
-            
+            multLevelUpEffect: 0, shakeIntensity: 0,
+
             laneColors: [
                 { core: '#00B140', rim: '#00ff5d', dark: '#005920', inner: '#b3ffcc' }, 
                 { core: '#DA291C', rim: '#ff4c3b', dark: '#73130c', inner: '#ffb3ad' }, 
@@ -770,36 +882,72 @@
             initGame(selectedTrack) {
                 if(audioCtx.state === 'suspended') audioCtx.resume();
                 if(this.animationId) cancelAnimationFrame(this.animationId);
+                if(this.pendingLoad) { this.pendingLoad.cancel(); this.pendingLoad = null; }
 
                 this.track = selectedTrack; this.score = 0; this.combo = 0; this.maxCombo = 0; this.multiplier = 1;
                 this.stats = { perfect: 0, good: 0, miss: 0 };
                 this.cantonaPower = 0; this.cantonaActive = false;
-                
+
                 this.bassIntensity = 0; this.vocalIntensity = 0;
-                this.multLevelUpEffect = 0;
-                
+                this.multLevelUpEffect = 0; this.shakeIntensity = 0;
+
                 this.particles.forEach(p => p.active = false);
                 this.shockwaves.forEach(s => s.active = false);
 
-                this.active = true; this.isPaused = false; this.audioPlayed = false;
-                
+                this.active = false; this.isPaused = false; this.audioPlayed = false;
+
                 let userSpeed = storageData.settings.speedMult || 1.0;
                 let userVol = storageData.settings.volume !== undefined ? storageData.settings.volume : 1.0;
                 masterGain.gain.value = userVol;
-                
+                this.syncOffsetMs = storageData.settings.audioOffset || 0;
+
                 let speedMult = this.track.difficulty === 'Easy' ? 0.8 : this.track.difficulty === 'Medium' ? 1.0 : 1.3;
-                this.noteSpeed = 750 * speedMult * userSpeed; 
+                this.noteSpeed = 750 * speedMult * userSpeed;
                 this.audioDelaySeconds = (this.spawnZ - this.hitLineZ) / this.noteSpeed;
                 this.audioDelayMs = this.audioDelaySeconds * 1000;
 
                 this.generateBeatmap();
-                ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive);
-                ui.showGame(); this.resize();
+                this.resize();
 
-                if (this.track.audioSrc && this.track.audioSrc !== "") {
-                    audioEl.src = this.track.audioSrc; audioEl.load();
-                    audioEl.onended = () => this.endGame();
+                if (!this.track.audioSrc || this.track.audioSrc === "") {
+                    this.beginPlay();
+                    return;
                 }
+
+                ui.showLoading(this.track.title);
+
+                let started = false;
+                const onReady = () => { if (started) return; started = true; cleanup(); this.beginPlay(); };
+                const onFail = () => { if (started) return; started = true; cleanup(); ui.showAudioError(); };
+                const cleanup = () => {
+                    clearTimeout(failsafeTimer);
+                    audioEl.removeEventListener('canplaythrough', onReady);
+                    audioEl.removeEventListener('error', onFail);
+                };
+                // Failsafe: don't block the player forever on a slow connection - start once enough has buffered to play.
+                const failsafeTimer = setTimeout(onReady, 6000);
+
+                this.pendingLoad = { cancel: () => { if (started) return; started = true; cleanup(); } };
+
+                audioEl.addEventListener('canplaythrough', onReady);
+                audioEl.addEventListener('error', onFail);
+                audioEl.onended = () => this.endGame();
+                audioEl.src = this.track.audioSrc;
+                audioEl.load();
+            },
+
+            cancelLoad() {
+                if (this.pendingLoad) { this.pendingLoad.cancel(); this.pendingLoad = null; }
+                this.stopAndClean();
+                ui.showStartMenu();
+            },
+
+            retryLoad() { if (this.track) this.initGame(this.track); else ui.showStartMenu(); },
+
+            beginPlay() {
+                this.active = true;
+                ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive);
+                ui.showGame();
 
                 this.elapsedMs = 0;
                 this.lastTime = performance.now();
@@ -849,11 +997,13 @@
                 }
                 
                 if (this.audioPlayed && audioEl.src && !audioEl.paused) {
-                    let targetMs = (audioEl.currentTime * 1000) + this.audioDelayMs;
+                    let targetMs = (audioEl.currentTime * 1000) + this.audioDelayMs - this.syncOffsetMs;
                     let drift = targetMs - this.elapsedMs;
-                    if (Math.abs(drift) > 100) this.elapsedMs = targetMs; 
-                    else this.elapsedMs += drift * 0.1; 
+                    if (Math.abs(drift) > 100) this.elapsedMs = targetMs;
+                    else this.elapsedMs += drift * 0.1;
                 }
+
+                if (this.shakeIntensity > 0) { this.shakeIntensity -= 0.6; if (this.shakeIntensity < 0) this.shakeIntensity = 0; }
 
                 const currentTime = this.getCurrentTime();
                 ui.updateProgress(audioEl.src && audioEl.duration ? (audioEl.currentTime / audioEl.duration) * 100 : 0);
@@ -919,6 +1069,10 @@
 
             draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.save();
+                if (this.shakeIntensity > 0) {
+                    ctx.translate((Math.random() - 0.5) * this.shakeIntensity, (Math.random() - 0.5) * this.shakeIntensity);
+                }
                 const currentTime = this.getCurrentTime();
                 let isMaxCantona = this.cantonaActive && this.multiplier >= 4;
                 const TWO_PI = Math.PI * 2;
@@ -1116,13 +1270,15 @@
                     ctx.fill();
 
                     let surfaceGrad = ctx.createRadialGradient(proj.x, proj.y - (ry*0.4), 0, proj.x, proj.y, rx);
-                    surfaceGrad.addColorStop(0, '#ffffff'); 
-                    surfaceGrad.addColorStop(0.35, colors.inner); 
-                    surfaceGrad.addColorStop(0.75, colors.core); 
-                    surfaceGrad.addColorStop(1, '#111111'); 
-                    
-                    ctx.fillStyle = surfaceGrad; 
+                    surfaceGrad.addColorStop(0, '#ffffff');
+                    surfaceGrad.addColorStop(0.35, colors.inner);
+                    surfaceGrad.addColorStop(0.75, colors.core);
+                    surfaceGrad.addColorStop(1, '#111111');
+
+                    if (!note.missed) { ctx.shadowBlur = 18 * proj.scale; ctx.shadowColor = colors.rim; }
+                    ctx.fillStyle = surfaceGrad;
                     ctx.beginPath(); ctx.ellipse(proj.x, proj.y, rx, ry, 0, 0, TWO_PI); ctx.fill();
+                    ctx.shadowBlur = 0;
                     
                     ctx.strokeStyle = 'rgba(255,255,255,0.9)'; 
                     ctx.lineWidth = 3 * proj.scale; 
@@ -1151,6 +1307,8 @@
                         ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TWO_PI); ctx.fill();
                     }
                 }
+
+                ctx.restore();
             },
 
             loop() {
@@ -1210,24 +1368,27 @@
                 this.combo++; if (this.combo > this.maxCombo) this.maxCombo = this.combo;
                 let oldMult = this.multiplier;
                 this.multiplier = Math.min(Math.floor(this.combo / 10) + 1, 4);
-                
+
                 if (this.multiplier > oldMult) {
-                    this.multLevelUpEffect = 1.0; 
+                    this.multLevelUpEffect = 1.0;
                 }
 
                 let mult = this.cantonaActive ? this.multiplier * 2 : this.multiplier;
                 this.score += (quality === 'perfect' ? 50 : 25) * mult;
-                
+
                 if (quality === 'perfect' && !this.cantonaActive) {
-                    this.cantonaPower += 2; 
+                    this.cantonaPower += 2;
                     if (this.cantonaPower >= 100) { this.cantonaPower = 100; this.triggerCantonaMode(); }
                 }
-                
+
                 ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive);
                 if(timingText !== '') ui.showFeedback(quality, timingText);
-                
+
+                if (STREAK_MILESTONES.includes(this.combo)) ui.showStreak(this.combo);
+
                 let proj = this.project(laneIndex, this.hitLineZ);
-                for(let i=0; i<15; i++) this.spawnParticle(proj.x, proj.y, (Math.random()-0.5)*20, -(Math.random()*20+10), Math.random()*8+4, this.laneColors[laneIndex].rim);
+                let burstColor = quality === 'perfect' ? '#FFD700' : this.laneColors[laneIndex].rim;
+                for(let i=0; i<15; i++) this.spawnParticle(proj.x, proj.y, (Math.random()-0.5)*20, -(Math.random()*20+10), Math.random()*8+4, burstColor);
                 this.createShockwave(laneIndex);
             },
 
@@ -1235,9 +1396,10 @@
                 this.stats.miss++;
                 if (this.combo > 0) ui.showFeedback('miss');
                 this.combo = 0; this.multiplier = 1;
+                this.shakeIntensity = 10;
                 ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive);
                 playSynthFX('miss');
-                
+
                 if(audioEl.src) {
                     let userVol = storageData.settings.volume !== undefined ? storageData.settings.volume : 1.0;
                     let now = audioCtx.currentTime;
@@ -1282,22 +1444,21 @@
 
             endGame() {
                 this.stopAndClean();
-                let wonMatch = false; let isNewHighScore = false;
-                
-                if (!storageData.highScores[this.track.id] || this.score > storageData.highScores[this.track.id]) {
-                    storageData.highScores[this.track.id] = this.score; isNewHighScore = true;
-                }
+                let wonMatch = false;
+                const finalStats = { score: this.score, maxCombo: this.maxCombo, ...this.stats };
+                const { accuracy, grade } = calcGrade(finalStats);
+                const isNewHighScore = recordScore(this.track.id, this.score, accuracy, grade);
 
                 if (isCareerMatch) {
                     const matchData = careerTour.find(m => m.level === currentCareerLevel);
                     if (this.score >= matchData.target) {
                         wonMatch = true;
-                        if (storageData.careerLevel === currentCareerLevel) storageData.careerLevel++; 
+                        if (storageData.careerLevel === currentCareerLevel) storageData.careerLevel++;
                     }
                 }
-                
+
                 saveGame();
-                ui.showGameOver({score: this.score, maxCombo: this.maxCombo, ...this.stats}, this.track.title, wonMatch, isNewHighScore);
+                ui.showGameOver(finalStats, this.track.title, this.track.id, wonMatch, isNewHighScore);
             }
         };
 
@@ -1348,5 +1509,3 @@
 </body>
 </html>
 
-
-```
