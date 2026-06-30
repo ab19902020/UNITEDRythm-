@@ -254,6 +254,15 @@
                     <input type="range" id="setting-offset" min="-150" max="150" step="5" value="0" oninput="ui.updateSettingsDisplay()">
                     <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-2">Notes hitting late? Increase. Hitting early? Decrease.</p>
                 </div>
+                <div class="w-full flex items-center justify-between gap-4">
+                    <div>
+                        <label class="text-xs font-black uppercase tracking-widest text-gray-300 block mb-1">Vibration</label>
+                        <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Buzz on hits, misses &amp; Cantona Mode</p>
+                    </div>
+                    <button id="setting-vibration" data-on="true" onclick="ui.toggleVibrationSetting()" class="shrink-0 w-14 h-8 rounded-full bg-[#00B140] border border-[#00ff5d] relative transition-colors">
+                        <span class="absolute top-1 left-7 w-6 h-6 rounded-full bg-white shadow-md transition-all"></span>
+                    </button>
+                </div>
             </div>
             <button onclick="ui.saveSettingsAndExit()" class="bg-gray-800 border-2 border-gray-500 text-white px-12 py-4 rounded-full font-bold uppercase tracking-widest hover:border-[#FFD700] hover:text-[#FFD700] active:scale-95 transition-all shadow-[0_10px_25px_rgba(0,0,0,0.8)]">Save & Close</button>
         </div>
@@ -425,8 +434,9 @@
         let storageData = JSON.parse(localStorage.getItem('united_rhythm_save')) || {};
         if (!storageData.highScores) storageData.highScores = {};
         if (!storageData.careerLevel) storageData.careerLevel = 1;
-        if (!storageData.settings) storageData.settings = { volume: 1.0, speedMult: 1.0, audioOffset: 0 };
+        if (!storageData.settings) storageData.settings = { volume: 1.0, speedMult: 1.0, audioOffset: 0, vibration: true };
         if (storageData.settings.audioOffset === undefined) storageData.settings.audioOffset = 0;
+        if (storageData.settings.vibration === undefined) storageData.settings.vibration = true;
 
         // Migrate legacy highScores (plain number) into {best, history:[]} leaderboard records
         Object.keys(storageData.highScores).forEach(id => {
@@ -498,11 +508,16 @@
             let userVol = storageData.settings.volume !== undefined ? storageData.settings.volume : 1.0;
 
             if (type === 'miss') {
-                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, audioCtx.currentTime); 
-                osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1); 
-                gain.gain.setValueAtTime(0.4 * userVol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15); 
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.4 * userVol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
                 osc.start(); osc.stop(audioCtx.currentTime + 0.2);
             }
+        }
+
+        function triggerVibration(pattern) {
+            if (storageData.settings.vibration === false) return;
+            if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch(e) {} }
         }
 
         let currentStageIndex = 0;
@@ -548,6 +563,7 @@
                 document.getElementById('setting-volume').value = storageData.settings.volume;
                 document.getElementById('setting-speed').value = storageData.settings.speedMult;
                 document.getElementById('setting-offset').value = storageData.settings.audioOffset || 0;
+                this.renderVibrationToggle(storageData.settings.vibration !== false);
                 this.updateSettingsDisplay();
             },
 
@@ -560,10 +576,30 @@
                 document.getElementById('set-offset-val').innerText = (off > 0 ? '+' : '') + off + 'ms';
             },
 
+            toggleVibrationSetting() {
+                const btn = document.getElementById('setting-vibration');
+                const next = btn.dataset.on !== 'true';
+                this.renderVibrationToggle(next);
+                if (next) triggerVibration(15);
+            },
+
+            renderVibrationToggle(isOn) {
+                const btn = document.getElementById('setting-vibration');
+                const knob = btn.querySelector('span');
+                btn.dataset.on = isOn;
+                btn.classList.toggle('bg-[#00B140]', isOn);
+                btn.classList.toggle('border-[#00ff5d]', isOn);
+                btn.classList.toggle('bg-gray-700', !isOn);
+                btn.classList.toggle('border-gray-600', !isOn);
+                knob.classList.toggle('left-7', isOn);
+                knob.classList.toggle('left-1', !isOn);
+            },
+
             saveSettingsAndExit() {
                 storageData.settings.volume = parseFloat(document.getElementById('setting-volume').value);
                 storageData.settings.speedMult = parseFloat(document.getElementById('setting-speed').value);
                 storageData.settings.audioOffset = parseInt(document.getElementById('setting-offset').value, 10);
+                storageData.settings.vibration = document.getElementById('setting-vibration').dataset.on === 'true';
                 saveGame(); this.showStartMenu();
             },
 
@@ -803,7 +839,7 @@
             cantonaPower: 0, cantonaActive: false,
 
             bassIntensity: 0, vocalIntensity: 0,
-            multLevelUpEffect: 0, shakeIntensity: 0,
+            multLevelUpEffect: 0, shakeIntensity: 0, strobeOpacity: 0,
 
             laneColors: [
                 { core: '#00B140', rim: '#00ff5d', dark: '#005920', inner: '#b3ffcc' }, 
@@ -889,7 +925,7 @@
                 this.cantonaPower = 0; this.cantonaActive = false;
 
                 this.bassIntensity = 0; this.vocalIntensity = 0;
-                this.multLevelUpEffect = 0; this.shakeIntensity = 0;
+                this.multLevelUpEffect = 0; this.shakeIntensity = 0; this.strobeOpacity = 0;
 
                 this.particles.forEach(p => p.active = false);
                 this.shockwaves.forEach(s => s.active = false);
@@ -1099,8 +1135,8 @@
                     else { this.vocalIntensity -= 0.05; } 
                     this.vocalIntensity = Math.max(0, this.vocalIntensity);
 
-                    let flashBass = this.bassIntensity * 0.9; 
-                    let flashVocal = this.vocalIntensity * 0.8;
+                    let flashBass = this.bassIntensity * 0.55;
+                    let flashVocal = this.vocalIntensity * 0.45;
 
                     if (flashBass > 0.01 || flashVocal > 0.01) {
                         ctx.globalCompositeOperation = 'screen'; 
@@ -1138,14 +1174,16 @@
 
                 const strobe = document.getElementById('strobe-overlay');
                 const bgImg = document.getElementById('bg-image');
-                let pop = 1 + (this.bassIntensity * 0.025); 
-                
-                if (isMaxCantona && this.bassIntensity > 0.05) {
-                    strobe.style.opacity = this.bassIntensity * 0.4; 
-                    pop += 0.02; 
-                } else if (!isMaxCantona) {
-                    strobe.style.opacity = 0;
-                }
+                let pop = 1 + (this.bassIntensity * 0.025);
+
+                // Smoothed, capped strobe so Cantona Mode reads as an exciting glow rather than a
+                // hard flicker that snaps to raw bass data every frame - the old version could
+                // flash hard enough each beat to obscure incoming notes and cause misses.
+                let strobeTarget = (isMaxCantona && this.bassIntensity > 0.05) ? Math.min(this.bassIntensity * 0.18, 0.18) : 0;
+                this.strobeOpacity += (strobeTarget - this.strobeOpacity) * 0.12;
+                if (this.strobeOpacity < 0.004) this.strobeOpacity = 0;
+                strobe.style.opacity = this.strobeOpacity;
+                if (isMaxCantona && this.bassIntensity > 0.05) pop += 0.01;
                 bgImg.style.transform = `scale(${pop})`;
 
                 if (this.multLevelUpEffect > 0) {
@@ -1383,8 +1421,9 @@
 
                 ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive);
                 if(timingText !== '') ui.showFeedback(quality, timingText);
+                triggerVibration(quality === 'perfect' ? 12 : 8);
 
-                if (STREAK_MILESTONES.includes(this.combo)) ui.showStreak(this.combo);
+                if (STREAK_MILESTONES.includes(this.combo)) { ui.showStreak(this.combo); triggerVibration([15, 30, 15]); }
 
                 let proj = this.project(laneIndex, this.hitLineZ);
                 let burstColor = quality === 'perfect' ? '#FFD700' : this.laneColors[laneIndex].rim;
@@ -1399,6 +1438,7 @@
                 this.shakeIntensity = 10;
                 ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive);
                 playSynthFX('miss');
+                triggerVibration([40, 30, 40]);
 
                 if(audioEl.src) {
                     let userVol = storageData.settings.volume !== undefined ? storageData.settings.volume : 1.0;
@@ -1414,10 +1454,11 @@
             },
 
             triggerCantonaMode() {
-                this.cantonaActive = true; 
+                this.cantonaActive = true;
                 document.getElementById('bg-image').classList.add('cantona-active-bg');
                 document.getElementById('cantona-overlay').style.opacity = '1';
-                
+                triggerVibration([20, 40, 20, 40, 100]);
+
                 for(let i=0; i<3; i++) { 
                     this.createShockwave(i); 
                     for(let p=0; p<30; p++) this.spawnParticle(this.project(i, this.hitLineZ).x, this.project(i, this.hitLineZ).y, (Math.random()-0.5)*20, -(Math.random()*20+10), Math.random()*8+4, '#FFD700');
