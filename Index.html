@@ -275,15 +275,6 @@
                         <span class="absolute top-1 left-7 w-6 h-6 rounded-full bg-white shadow-md transition-all"></span>
                     </button>
                 </div>
-                <div class="w-full flex items-center justify-between gap-4">
-                    <div>
-                        <label class="text-xs font-black uppercase tracking-widest text-gray-300 block mb-1">Hit Sounds</label>
-                        <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Chimes on every note you strike</p>
-                    </div>
-                    <button id="setting-hitsounds" data-on="true" onclick="ui.toggleHitSoundsSetting()" class="shrink-0 w-14 h-8 rounded-full bg-[#00B140] border border-[#00ff5d] relative transition-colors">
-                        <span class="absolute top-1 left-7 w-6 h-6 rounded-full bg-white shadow-md transition-all"></span>
-                    </button>
-                </div>
             </div>
             <button onclick="ui.saveSettingsAndExit()" class="bg-gray-800 border-2 border-gray-500 text-white px-12 py-4 rounded-full font-bold uppercase tracking-widest hover:border-[#FFD700] hover:text-[#FFD700] active:scale-95 transition-all shadow-[0_10px_25px_rgba(0,0,0,0.8)]">Save & Close</button>
         </div>
@@ -458,10 +449,9 @@
         let storageData = JSON.parse(localStorage.getItem('united_rhythm_save')) || {};
         if (!storageData.highScores) storageData.highScores = {};
         if (!storageData.careerLevel) storageData.careerLevel = 1;
-        if (!storageData.settings) storageData.settings = { volume: 1.0, speedMult: 1.0, audioOffset: 0, vibration: true, hitSounds: true };
+        if (!storageData.settings) storageData.settings = { volume: 1.0, speedMult: 1.0, audioOffset: 0, vibration: true };
         if (storageData.settings.audioOffset === undefined) storageData.settings.audioOffset = 0;
         if (storageData.settings.vibration === undefined) storageData.settings.vibration = true;
-        if (storageData.settings.hitSounds === undefined) storageData.settings.hitSounds = true;
 
         // Migrate legacy highScores (plain number) into {best, history:[]} leaderboard records
         Object.keys(storageData.highScores).forEach(id => {
@@ -539,25 +529,6 @@
                 osc.frequency.exponentialRampToValueAtTime(10, now + 0.1);
                 gain.gain.setValueAtTime(0.4 * userVol, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
                 osc.start(); osc.stop(now + 0.2);
-            } else if (type === 'perfect' || type === 'great' || type === 'good') {
-                if (storageData.settings.hitSounds === false) return;
-                const freq = type === 'perfect' ? 1568 : type === 'great' ? 1175 : 880;
-                const vol = (type === 'perfect' ? 0.09 : 0.06) * userVol;
-                osc.type = 'sine'; osc.frequency.setValueAtTime(freq, now);
-                gain.gain.setValueAtTime(vol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-                osc.start(); osc.stop(now + 0.1);
-            } else if (type === 'multup') {
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(440, now);
-                osc.frequency.exponentialRampToValueAtTime(1320, now + 0.18);
-                gain.gain.setValueAtTime(0.12 * userVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-                osc.start(); osc.stop(now + 0.3);
-            } else if (type === 'cantona') {
-                osc.type = 'square'; osc.frequency.setValueAtTime(523, now);
-                osc.frequency.setValueAtTime(659, now + 0.1);
-                osc.frequency.setValueAtTime(784, now + 0.2);
-                osc.frequency.setValueAtTime(1047, now + 0.3);
-                gain.gain.setValueAtTime(0.08 * userVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
-                osc.start(); osc.stop(now + 0.6);
             }
         }
 
@@ -610,7 +581,6 @@
                 document.getElementById('setting-speed').value = storageData.settings.speedMult;
                 document.getElementById('setting-offset').value = storageData.settings.audioOffset || 0;
                 this.renderVibrationToggle(storageData.settings.vibration !== false);
-                this.renderToggle('setting-hitsounds', storageData.settings.hitSounds !== false);
                 this.updateSettingsDisplay();
             },
 
@@ -632,13 +602,6 @@
 
             renderVibrationToggle(isOn) { this.renderToggle('setting-vibration', isOn); },
 
-            toggleHitSoundsSetting() {
-                const btn = document.getElementById('setting-hitsounds');
-                const next = btn.dataset.on !== 'true';
-                this.renderToggle('setting-hitsounds', next);
-                if (next) { storageData.settings.hitSounds = true; playSynthFX('perfect'); }
-            },
-
             renderToggle(btnId, isOn) {
                 const btn = document.getElementById(btnId);
                 const knob = btn.querySelector('span');
@@ -656,7 +619,6 @@
                 storageData.settings.speedMult = parseFloat(document.getElementById('setting-speed').value);
                 storageData.settings.audioOffset = parseInt(document.getElementById('setting-offset').value, 10);
                 storageData.settings.vibration = document.getElementById('setting-vibration').dataset.on === 'true';
-                storageData.settings.hitSounds = document.getElementById('setting-hitsounds').dataset.on === 'true';
                 saveGame(); this.showStartMenu();
             },
 
@@ -1623,7 +1585,6 @@
 
                 if (this.multiplier > oldMult) {
                     this.multLevelUpEffect = 1.0;
-                    playSynthFX('multup');
                     triggerVibration([10, 20, 10]);
                 }
 
@@ -1638,7 +1599,6 @@
 
                 ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive, this.combo);
                 if(timingText !== '') ui.showFeedback(quality, timingText);
-                playSynthFX(quality);
                 triggerVibration(quality === 'perfect' ? 12 : quality === 'great' ? 9 : 6);
 
                 if (STREAK_MILESTONES.includes(this.combo)) { ui.showStreak(this.combo); triggerVibration([15, 30, 15]); }
@@ -1676,7 +1636,6 @@
                 this.cantonaActive = true;
                 domFX.bgImg.classList.add('cantona-active-bg');
                 document.getElementById('cantona-overlay').style.opacity = '1';
-                playSynthFX('cantona');
                 triggerVibration([20, 40, 20, 40, 100]);
 
                 for(let i=0; i<3; i++) { 
