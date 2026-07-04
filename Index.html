@@ -130,6 +130,9 @@
 
         .leaderboard-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
         .leaderboard-row.is-new { border-color: rgba(255,215,0,0.6); background: rgba(255,215,0,0.08); box-shadow: 0 0 12px rgba(255,215,0,0.25); }
+
+        @keyframes comboPop { 0% { transform: scale(1.35); } 100% { transform: scale(1); } }
+        .combo-pop { animation: comboPop 0.18s ease-out; }
     </style>
 </head>
 <body id="main-body">
@@ -182,6 +185,15 @@
             </div>
 
             <div id="hud-streak" class="absolute top-[18%] left-1/2 text-3xl font-black tracking-tighter opacity-0 pointer-events-none z-50 uppercase text-transparent bg-clip-text bg-gradient-to-b from-[#FFF] to-[#FFD700] drop-shadow-[0_5px_15px_rgba(255,215,0,0.8)] whitespace-nowrap" style="-webkit-text-stroke: 1px #DA291C;">50 NOTE STREAK!</div>
+
+            <div id="hud-ready" class="absolute top-[42%] left-1/2 text-7xl font-black italic tracking-widest uppercase opacity-0 pointer-events-none z-50 whitespace-nowrap text-[#FFD700] drop-shadow-[0_10px_30px_rgba(0,0,0,1)]" style="-webkit-text-stroke: 2px rgba(0,0,0,0.6);">READY</div>
+
+            <div id="combo-group" class="absolute bottom-[25%] left-6 flex flex-col items-center gap-1 opacity-0 transition-opacity duration-300 pointer-events-none">
+                <div class="hud-glass border-[#FFD700] border-2 rounded-full w-24 h-24 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
+                    <span id="hud-combo" class="text-5xl font-black text-white drop-shadow-lg">0</span>
+                </div>
+                <div class="text-[10px] uppercase font-black tracking-widest text-gray-300 bg-black/60 px-3 py-1 rounded-full border border-gray-600 shadow-[0_5px_10px_rgba(0,0,0,0.5)]">Combo</div>
+            </div>
 
             <div class="absolute bottom-[25%] right-6 flex flex-col items-center gap-1">
                 <div class="hud-glass border-[#00B140] border-2 rounded-full w-24 h-24 flex items-center justify-center transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.8)]" id="mult-container">
@@ -263,6 +275,15 @@
                         <span class="absolute top-1 left-7 w-6 h-6 rounded-full bg-white shadow-md transition-all"></span>
                     </button>
                 </div>
+                <div class="w-full flex items-center justify-between gap-4">
+                    <div>
+                        <label class="text-xs font-black uppercase tracking-widest text-gray-300 block mb-1">Hit Sounds</label>
+                        <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Chimes on every note you strike</p>
+                    </div>
+                    <button id="setting-hitsounds" data-on="true" onclick="ui.toggleHitSoundsSetting()" class="shrink-0 w-14 h-8 rounded-full bg-[#00B140] border border-[#00ff5d] relative transition-colors">
+                        <span class="absolute top-1 left-7 w-6 h-6 rounded-full bg-white shadow-md transition-all"></span>
+                    </button>
+                </div>
             </div>
             <button onclick="ui.saveSettingsAndExit()" class="bg-gray-800 border-2 border-gray-500 text-white px-12 py-4 rounded-full font-bold uppercase tracking-widest hover:border-[#FFD700] hover:text-[#FFD700] active:scale-95 transition-all shadow-[0_10px_25px_rgba(0,0,0,0.8)]">Save & Close</button>
         </div>
@@ -332,9 +353,12 @@
                     <div id="end-score" class="text-6xl font-black text-white drop-shadow-md">0</div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3 mt-5 mb-4 border-t border-b border-gray-700/50 py-4">
+                <div class="grid grid-cols-4 gap-2 mt-5 mb-4 border-t border-b border-gray-700/50 py-4">
                     <div class="text-center bg-black/60 rounded-lg py-2 border border-gray-700/50 shadow-inner">
                         <div class="text-[9px] text-gray-400 uppercase tracking-widest mb-1">Perfect</div><div class="text-2xl text-[#FFD700] font-black" id="end-perfect">0</div>
+                    </div>
+                    <div class="text-center bg-black/60 rounded-lg py-2 border border-gray-700/50 shadow-inner">
+                        <div class="text-[9px] text-gray-400 uppercase tracking-widest mb-1">Great</div><div class="text-2xl text-[#42a5f5] font-black" id="end-great">0</div>
                     </div>
                     <div class="text-center bg-black/60 rounded-lg py-2 border border-gray-700/50 shadow-inner">
                         <div class="text-[9px] text-gray-400 uppercase tracking-widest mb-1">Good</div><div class="text-2xl text-[#00B140] font-black" id="end-good">0</div>
@@ -434,9 +458,10 @@
         let storageData = JSON.parse(localStorage.getItem('united_rhythm_save')) || {};
         if (!storageData.highScores) storageData.highScores = {};
         if (!storageData.careerLevel) storageData.careerLevel = 1;
-        if (!storageData.settings) storageData.settings = { volume: 1.0, speedMult: 1.0, audioOffset: 0, vibration: true };
+        if (!storageData.settings) storageData.settings = { volume: 1.0, speedMult: 1.0, audioOffset: 0, vibration: true, hitSounds: true };
         if (storageData.settings.audioOffset === undefined) storageData.settings.audioOffset = 0;
         if (storageData.settings.vibration === undefined) storageData.settings.vibration = true;
+        if (storageData.settings.hitSounds === undefined) storageData.settings.hitSounds = true;
 
         // Migrate legacy highScores (plain number) into {best, history:[]} leaderboard records
         Object.keys(storageData.highScores).forEach(id => {
@@ -451,8 +476,9 @@
         function saveGame() { localStorage.setItem('united_rhythm_save', JSON.stringify(storageData)); }
 
         function calcGrade(stats) {
-            let total = stats.perfect + stats.good + stats.miss;
-            let accuracy = total > 0 ? Math.round(((stats.perfect + (stats.good * 0.5)) / total) * 100) : 0;
+            const great = stats.great || 0;
+            let total = stats.perfect + great + stats.good + stats.miss;
+            let accuracy = total > 0 ? Math.round(((stats.perfect + (great * 0.8) + (stats.good * 0.5)) / total) * 100) : 0;
             let grade = 'D', gradeColor = '#9ca3af';
             if (accuracy === 100) { grade = 'SS'; gradeColor = '#00ffff'; }
             else if (accuracy >= 95) { grade = 'S'; gradeColor = '#FFD700'; }
@@ -506,12 +532,32 @@
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
             osc.connect(gain); gain.connect(audioCtx.destination);
             let userVol = storageData.settings.volume !== undefined ? storageData.settings.volume : 1.0;
+            const now = audioCtx.currentTime;
 
             if (type === 'miss') {
-                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.4 * userVol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, now);
+                osc.frequency.exponentialRampToValueAtTime(10, now + 0.1);
+                gain.gain.setValueAtTime(0.4 * userVol, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(); osc.stop(now + 0.2);
+            } else if (type === 'perfect' || type === 'great' || type === 'good') {
+                if (storageData.settings.hitSounds === false) return;
+                const freq = type === 'perfect' ? 1568 : type === 'great' ? 1175 : 880;
+                const vol = (type === 'perfect' ? 0.09 : 0.06) * userVol;
+                osc.type = 'sine'; osc.frequency.setValueAtTime(freq, now);
+                gain.gain.setValueAtTime(vol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+                osc.start(); osc.stop(now + 0.1);
+            } else if (type === 'multup') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(1320, now + 0.18);
+                gain.gain.setValueAtTime(0.12 * userVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc.start(); osc.stop(now + 0.3);
+            } else if (type === 'cantona') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(523, now);
+                osc.frequency.setValueAtTime(659, now + 0.1);
+                osc.frequency.setValueAtTime(784, now + 0.2);
+                osc.frequency.setValueAtTime(1047, now + 0.3);
+                gain.gain.setValueAtTime(0.08 * userVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+                osc.start(); osc.stop(now + 0.6);
             }
         }
 
@@ -564,6 +610,7 @@
                 document.getElementById('setting-speed').value = storageData.settings.speedMult;
                 document.getElementById('setting-offset').value = storageData.settings.audioOffset || 0;
                 this.renderVibrationToggle(storageData.settings.vibration !== false);
+                this.renderToggle('setting-hitsounds', storageData.settings.hitSounds !== false);
                 this.updateSettingsDisplay();
             },
 
@@ -583,8 +630,17 @@
                 if (next) triggerVibration(15);
             },
 
-            renderVibrationToggle(isOn) {
-                const btn = document.getElementById('setting-vibration');
+            renderVibrationToggle(isOn) { this.renderToggle('setting-vibration', isOn); },
+
+            toggleHitSoundsSetting() {
+                const btn = document.getElementById('setting-hitsounds');
+                const next = btn.dataset.on !== 'true';
+                this.renderToggle('setting-hitsounds', next);
+                if (next) { storageData.settings.hitSounds = true; playSynthFX('perfect'); }
+            },
+
+            renderToggle(btnId, isOn) {
+                const btn = document.getElementById(btnId);
                 const knob = btn.querySelector('span');
                 btn.dataset.on = isOn;
                 btn.classList.toggle('bg-[#00B140]', isOn);
@@ -600,6 +656,7 @@
                 storageData.settings.speedMult = parseFloat(document.getElementById('setting-speed').value);
                 storageData.settings.audioOffset = parseInt(document.getElementById('setting-offset').value, 10);
                 storageData.settings.vibration = document.getElementById('setting-vibration').dataset.on === 'true';
+                storageData.settings.hitSounds = document.getElementById('setting-hitsounds').dataset.on === 'true';
                 saveGame(); this.showStartMenu();
             },
 
@@ -735,7 +792,7 @@
 
                 document.getElementById('end-score').innerText = stats.score; document.getElementById('end-combo').innerText = 'x' + stats.maxCombo;
                 document.getElementById('end-track-name').innerText = trackName;
-                document.getElementById('end-perfect').innerText = stats.perfect; document.getElementById('end-good').innerText = stats.good; document.getElementById('end-miss').innerText = stats.miss;
+                document.getElementById('end-perfect').innerText = stats.perfect; document.getElementById('end-great').innerText = stats.great || 0; document.getElementById('end-good').innerText = stats.good; document.getElementById('end-miss').innerText = stats.miss;
 
                 let { accuracy, grade, gradeColor } = calcGrade(stats);
                 document.getElementById('end-accuracy').innerText = accuracy + '%';
@@ -768,8 +825,21 @@
                 }, 1500);
             },
             
-            updateHUD(score, multiplier, cantonaPower, cantonaActive) {
-                document.getElementById('hud-score').innerText = score;
+            updateHUD(score, multiplier, cantonaPower, cantonaActive, combo) {
+                if (combo !== undefined) {
+                    const comboGroup = document.getElementById('combo-group');
+                    const comboEl = document.getElementById('hud-combo');
+                    if (combo >= 5) {
+                        comboGroup.style.opacity = '1';
+                        if (comboEl.innerText != combo) {
+                            comboEl.innerText = combo;
+                            comboEl.classList.remove('combo-pop'); void comboEl.offsetWidth; comboEl.classList.add('combo-pop');
+                        }
+                    } else {
+                        comboGroup.style.opacity = '0';
+                        comboEl.innerText = combo;
+                    }
+                }
                 const multContainer = document.getElementById('mult-container'); const multEl = document.getElementById('hud-multiplier');
                 let displayMult = cantonaActive ? multiplier * 2 : multiplier;
                 
@@ -799,16 +869,28 @@
                 
                 group.classList.remove('hit-text'); void group.offsetWidth; 
                 
-                if(quality === 'perfect') { fb.innerText = "PERFECT"; fb.style.color = "#FFD700"; } 
-                else if (quality === 'good') { fb.innerText = "GOOD"; fb.style.color = "#00B140"; } 
-                else if (quality === 'hold') { fb.innerText = "HOLD!"; fb.style.color = "#42a5f5"; }
+                if(quality === 'perfect') { fb.innerText = "PERFECT"; fb.style.color = "#FFD700"; }
+                else if (quality === 'great') { fb.innerText = "GREAT"; fb.style.color = "#42a5f5"; }
+                else if (quality === 'good') { fb.innerText = "GOOD"; fb.style.color = "#00B140"; }
+                else if (quality === 'hold') { fb.innerText = "HOLD!"; fb.style.color = "#a78bfa"; }
                 else { fb.innerText = "MISS"; fb.style.color = "#DA291C"; }
-                
-                if (timing !== '' && quality === 'good') {
+
+                if (timing !== '' && timing !== 'FLAWLESS' && (quality === 'good' || quality === 'great')) {
                     tim.style.display = 'block'; tim.innerText = timing; tim.style.color = '#fff';
                 } else { tim.style.display = 'none'; }
                 
                 group.classList.add('hit-text');
+            },
+
+            showReadyGo() {
+                const el = document.getElementById('hud-ready');
+                el.innerText = 'READY'; el.style.color = '#FFD700';
+                el.classList.remove('hit-text'); void el.offsetWidth; el.classList.add('hit-text');
+                setTimeout(() => {
+                    el.innerText = 'GO!'; el.style.color = '#00ff5d';
+                    el.classList.remove('hit-text'); void el.offsetWidth; el.classList.add('hit-text');
+                    triggerVibration(20);
+                }, 1000);
             },
 
             updateProgress(percent) { document.getElementById('hud-progress').style.width = `${percent}%`; },
@@ -821,43 +903,63 @@
             }
         };
 
-        const canvas = document.getElementById('game-canvas'); const ctx = canvas.getContext('2d', { alpha: true }); 
+        const canvas = document.getElementById('game-canvas'); const ctx = canvas.getContext('2d', { alpha: true });
+
+        // Cached per-frame DOM handles - avoids getElementById churn inside the render loop
+        const domFX = {
+            strobe: document.getElementById('strobe-overlay'),
+            bgImg: document.getElementById('bg-image'),
+            hudScore: document.getElementById('hud-score'),
+            hudProgress: document.getElementById('hud-progress')
+        };
 
         const gameEngine = {
             active: false, isPaused: false, track: null, score: 0, combo: 0, maxCombo: 0, multiplier: 1,
-            stats: { perfect: 0, good: 0, miss: 0 },
+            stats: { perfect: 0, great: 0, good: 0, miss: 0 },
             beatmap: [], animationId: null,
-            
-            particles: Array.from({length: 300}, () => ({active: false, x:0, y:0, vx:0, vy:0, size:0, life:0, color:''})),
+
+            particles: Array.from({length: 300}, () => ({active: false, x:0, y:0, vx:0, vy:0, size:0, life:0, color:'', gravity:0})),
             shockwaves: Array.from({length: 20}, () => ({active: false, lane:0, radius:0, life:0})),
-            
-            hitLineZ: 100, spawnZ: 5000, noteSpeed: 800, 
+
+            hitLineZ: 100, spawnZ: 5000, noteSpeed: 800,
             elapsedMs: 0, lastTime: 0, audioDelayMs: 0, audioDelaySeconds: 0, audioPlayed: false,
-            fpsTime: 0, frameCount: 0,
-            
-            lanesHeld: [false, false, false], receptorGlow: [0, 0, 0], 
+            fpsTime: 0, frameCount: 0, dtSec: 0.016,
+            viewW: 0, viewH: 0, dpr: 1,
+            displayScore: 0, holdScoreBuffer: 0,
+            hitWindows: { perfect: 0.05, great: 0.095, good: 0.14 },
+
+            lanesHeld: [false, false, false], receptorGlow: [0, 0, 0],
             cantonaPower: 0, cantonaActive: false,
 
             bassIntensity: 0, vocalIntensity: 0,
             multLevelUpEffect: 0, shakeIntensity: 0, strobeOpacity: 0,
 
             laneColors: [
-                { core: '#00B140', rim: '#00ff5d', dark: '#005920', inner: '#b3ffcc' }, 
-                { core: '#DA291C', rim: '#ff4c3b', dark: '#73130c', inner: '#ffb3ad' }, 
-                { core: '#FFD700', rim: '#ffea4d', dark: '#998100', inner: '#fff6b3' }  
+                { core: '#00B140', rim: '#00ff5d', dark: '#005920', inner: '#b3ffcc', rgb: '0,177,64' },
+                { core: '#DA291C', rim: '#ff4c3b', dark: '#73130c', inner: '#ffb3ad', rgb: '218,41,28' },
+                { core: '#FFD700', rim: '#ffea4d', dark: '#998100', inner: '#fff6b3', rgb: '255,215,0' }
             ],
 
-            resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; },
+            // Crisp rendering on high-density screens (capped at 2x so low-end phones stay fast)
+            resize() {
+                this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+                this.viewW = window.innerWidth; this.viewH = window.innerHeight;
+                canvas.width = Math.round(this.viewW * this.dpr);
+                canvas.height = Math.round(this.viewH * this.dpr);
+                canvas.style.width = this.viewW + 'px';
+                canvas.style.height = this.viewH + 'px';
+                ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+            },
 
             projectRaw(pctX, z) {
                 const stage = stages[currentStageIndex];
-                const safeZ = Math.max(z, 1); 
+                const safeZ = Math.max(z, 1);
                 let scale = this.hitLineZ / safeZ;
-                
-                const vpX = canvas.width * stage.vpX; 
-                const vpY = canvas.height * stage.vpY; 
-                const hitY = canvas.height * stage.hitY; 
-                const targetX = canvas.width * pctX;
+
+                const vpX = this.viewW * stage.vpX;
+                const vpY = this.viewH * stage.vpY;
+                const hitY = this.viewH * stage.hitY;
+                const targetX = this.viewW * pctX;
                 
                 const screenX = vpX + (targetX - vpX) * scale;
                 const screenY = vpY + (hitY - vpY) * scale;
@@ -872,47 +974,76 @@
 
             generateBeatmap() {
                 this.beatmap = [];
-                const secPerBeat = 60 / this.track.bpm; 
-                const totalBeats = Math.floor(600 / secPerBeat); 
-                let lastLane = 1; let laneBlockedUntil = [0, 0, 0]; 
+                const secPerBeat = 60 / this.track.bpm;
+                const totalBeats = Math.floor(600 / secPerBeat);
+                // density: 0 = Easy, 1 = Medium, 2 = Hard - drives off-beats, chords and lane movement
+                const density = this.track.difficulty === 'Easy' ? 0 : this.track.difficulty === 'Medium' ? 1 : 2;
+                let lastLane = 1; let laneBlockedUntil = [0, 0, 0];
+
+                const pushNote = (hitTime, lane, isHold, holdDuration) => {
+                    this.beatmap.push({ hitTime, lane, active: true, type: isHold ? 'hold' : 'tap', duration: holdDuration, holdActive: false, missed: false });
+                    laneBlockedUntil[lane] = hitTime + (isHold ? holdDuration + 0.4 : 0.13);
+                };
 
                 for (let b = 0; b < totalBeats; b++) {
                     let hitTime = this.track.offset + (b * secPerBeat);
-                    let phraseBeat = b % 64; let isBigMoment = ((b % 64) >= 32 && (b % 64) < 64);
-                    if (!isBigMoment && b % 8 === 7) continue; 
+                    // Charts open gently and get frantic: full intensity after ~4 phrases
+                    const ramp = Math.min(1, b / 256);
+                    let isBigMoment = ((b % 64) >= 32 && (b % 64) < 64);
+                    if (!isBigMoment && b % 8 === 7) continue;
                     if (isBigMoment && b % 16 === 15) continue;
 
                     let activeHoldsCount = 0;
                     for (let l = 0; l < 3; l++) {
                         if (laneBlockedUntil[l] > hitTime) activeHoldsCount++;
                     }
-                    if (activeHoldsCount >= 2) continue; 
+                    if (activeHoldsCount >= 2) continue;
 
                     let availableLanes = [0, 1, 2].filter(l => hitTime >= laneBlockedUntil[l]);
-                    if (availableLanes.length === 0) continue; 
+                    if (availableLanes.length === 0) continue;
 
-                    let lane = availableLanes.includes(lastLane) ? lastLane : availableLanes[Math.floor(Math.random() * availableLanes.length)];
-                    if(Math.random() > 0.5) lane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
+                    // Bias towards switching lanes so streams force real hand movement
+                    let moveChance = 0.35 + density * 0.18 + ramp * 0.15;
+                    let moveLanes = availableLanes.filter(l => l !== lastLane);
+                    let lane = (moveLanes.length > 0 && Math.random() < moveChance)
+                        ? moveLanes[Math.floor(Math.random() * moveLanes.length)]
+                        : availableLanes[Math.floor(Math.random() * availableLanes.length)];
 
-                    let isHold = (isBigMoment && Math.random() > 0.7 && (b % 64) % 4 === 0);
-                    let holdDuration = isHold ? secPerBeat * 2 : 0;
-                    
-                    laneBlockedUntil[lane] = hitTime + (isHold ? holdDuration + 0.45 : 0.15);
+                    let isHold = (isBigMoment && Math.random() > (0.7 - density * 0.08) && (b % 64) % 4 === 0);
+                    // Variable hold lengths (1.5-3 beats) keep hold patterns from feeling samey
+                    let holdBeats = isHold ? (1.5 + Math.floor(Math.random() * (density + 2)) * 0.5) : 0;
+                    let holdDuration = holdBeats * secPerBeat;
 
-                    this.beatmap.push({ hitTime: hitTime, lane: lane, active: true, type: isHold ? 'hold' : 'tap', duration: holdDuration, holdActive: false, missed: false });
+                    pushNote(hitTime, lane, isHold, holdDuration);
                     lastLane = lane;
 
                     if (isBigMoment && (b % 64) % 4 === 0) {
-                        if (Math.random() > (isHold ? 0.6 : 0.4)) { 
+                        let chordChance = 0.4 + density * 0.13 + ramp * 0.07;
+                        if (Math.random() < (isHold ? chordChance * 0.7 : chordChance)) {
                             let remainingLanes = availableLanes.filter(l => l !== lane);
                             if (remainingLanes.length > 0) {
                                 let chordLane = remainingLanes[Math.floor(Math.random() * remainingLanes.length)];
-                                this.beatmap.push({ hitTime: hitTime, lane: chordLane, active: true, type: isHold ? 'hold' : 'tap', duration: holdDuration, holdActive: false, missed: false });
-                                laneBlockedUntil[chordLane] = hitTime + (isHold ? holdDuration + 0.45 : 0.15);
+                                pushNote(hitTime, chordLane, isHold, holdDuration);
+                            }
+                        }
+                    }
+
+                    // Off-beat (8th note) fills on Medium/Hard, ramping up through the song
+                    if (density > 0 && !isHold) {
+                        let offChance = (0.08 * density) + (0.14 * density * ramp) + (isBigMoment ? 0.06 * density : 0);
+                        if (Math.random() < offChance) {
+                            let offTime = hitTime + secPerBeat / 2;
+                            let offLanes = [0, 1, 2].filter(l => offTime >= laneBlockedUntil[l]);
+                            if (offLanes.length > 0) {
+                                let offMoveLanes = offLanes.filter(l => l !== lastLane);
+                                let offLane = offMoveLanes.length > 0 ? offMoveLanes[Math.floor(Math.random() * offMoveLanes.length)] : offLanes[0];
+                                pushNote(offTime, offLane, false, 0);
+                                lastLane = offLane;
                             }
                         }
                     }
                 }
+                this.beatmap.sort((a, b) => a.hitTime - b.hitTime);
             },
 
             initGame(selectedTrack) {
@@ -921,8 +1052,9 @@
                 if(this.pendingLoad) { this.pendingLoad.cancel(); this.pendingLoad = null; }
 
                 this.track = selectedTrack; this.score = 0; this.combo = 0; this.maxCombo = 0; this.multiplier = 1;
-                this.stats = { perfect: 0, good: 0, miss: 0 };
+                this.stats = { perfect: 0, great: 0, good: 0, miss: 0 };
                 this.cantonaPower = 0; this.cantonaActive = false;
+                this.displayScore = 0; this.holdScoreBuffer = 0;
 
                 this.bassIntensity = 0; this.vocalIntensity = 0;
                 this.multLevelUpEffect = 0; this.shakeIntensity = 0; this.strobeOpacity = 0;
@@ -937,8 +1069,14 @@
                 masterGain.gain.value = userVol;
                 this.syncOffsetMs = storageData.settings.audioOffset || 0;
 
-                let speedMult = this.track.difficulty === 'Easy' ? 0.8 : this.track.difficulty === 'Medium' ? 1.0 : 1.3;
-                this.noteSpeed = 750 * speedMult * userSpeed;
+                let speedMult = this.track.difficulty === 'Easy' ? 0.85 : this.track.difficulty === 'Medium' ? 1.1 : 1.4;
+                this.noteSpeed = 800 * speedMult * userSpeed;
+                // Judgment windows tighten with difficulty (seconds either side of the beat)
+                this.hitWindows = this.track.difficulty === 'Easy'
+                    ? { perfect: 0.06, great: 0.11, good: 0.16 }
+                    : this.track.difficulty === 'Medium'
+                    ? { perfect: 0.05, great: 0.095, good: 0.14 }
+                    : { perfect: 0.045, great: 0.085, good: 0.125 };
                 this.audioDelaySeconds = (this.spawnZ - this.hitLineZ) / this.noteSpeed;
                 this.audioDelayMs = this.audioDelaySeconds * 1000;
 
@@ -982,8 +1120,10 @@
 
             beginPlay() {
                 this.active = true;
-                ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive);
+                domFX.hudScore.innerText = '0';
+                ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive, this.combo);
                 ui.showGame();
+                ui.showReadyGo();
 
                 this.elapsedMs = 0;
                 this.lastTime = performance.now();
@@ -1025,43 +1165,55 @@
             getCurrentTime() { return (this.elapsedMs - this.audioDelayMs) / 1000; },
 
             update(dt) {
+                // All motion below is scaled by dt so gameplay feels identical at 30, 60 or 120fps
+                const dtSec = dt / 1000;
+                const f = dtSec * 60;
                 this.elapsedMs += dt;
 
                 if (!this.audioPlayed && this.elapsedMs >= this.audioDelayMs) {
                     this.audioPlayed = true;
                     if (this.track.audioSrc) audioEl.play().catch(e=>console.log(e));
                 }
-                
+
                 if (this.audioPlayed && audioEl.src && !audioEl.paused) {
                     let targetMs = (audioEl.currentTime * 1000) + this.audioDelayMs - this.syncOffsetMs;
                     let drift = targetMs - this.elapsedMs;
                     if (Math.abs(drift) > 100) this.elapsedMs = targetMs;
-                    else this.elapsedMs += drift * 0.1;
+                    else this.elapsedMs += drift * Math.min(1, dtSec * 6);
                 }
 
-                if (this.shakeIntensity > 0) { this.shakeIntensity -= 0.6; if (this.shakeIntensity < 0) this.shakeIntensity = 0; }
+                if (this.shakeIntensity > 0) { this.shakeIntensity -= 36 * dtSec; if (this.shakeIntensity < 0) this.shakeIntensity = 0; }
 
                 const currentTime = this.getCurrentTime();
-                ui.updateProgress(audioEl.src && audioEl.duration ? (audioEl.currentTime / audioEl.duration) * 100 : 0);
+                domFX.hudProgress.style.width = `${audioEl.src && audioEl.duration ? (audioEl.currentTime / audioEl.duration) * 100 : 0}%`;
+
+                // Smooth score count-up
+                if (this.displayScore !== this.score) {
+                    this.displayScore += (this.score - this.displayScore) * Math.min(1, dtSec * 14);
+                    if (Math.abs(this.score - this.displayScore) < 1) this.displayScore = this.score;
+                    domFX.hudScore.innerText = Math.round(this.displayScore);
+                }
 
                 if (this.cantonaActive) {
-                    this.cantonaPower -= 0.1; 
-                    if (this.cantonaPower <= 0) { 
-                        this.cantonaPower = 0; this.cantonaActive = false; 
-                        document.getElementById('bg-image').classList.remove('cantona-active-bg'); 
+                    this.cantonaPower -= 6 * dtSec;
+                    if (this.cantonaPower <= 0) {
+                        this.cantonaPower = 0; this.cantonaActive = false;
+                        domFX.bgImg.classList.remove('cantona-active-bg');
                         document.getElementById('cantona-overlay').style.opacity = '0';
-                        document.getElementById('strobe-overlay').style.opacity = '0';
-                        document.getElementById('bg-image').style.transform = 'scale(1)';
+                        domFX.strobe.style.opacity = '0';
+                        domFX.bgImg.style.transform = 'scale(1)';
                     }
-                    ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive);
+                    ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive, this.combo);
                 }
+
+                const missWindow = this.hitWindows.good + 0.02;
 
                 for (let i = this.beatmap.length - 1; i >= 0; i--) {
                     let note = this.beatmap[i];
                     if (!note.active) continue;
 
                     if (!note.missed && !note.holdActive) {
-                        if (note.hitTime < currentTime - 0.2) {
+                        if (note.hitTime < currentTime - missWindow) {
                             note.missed = true;
                             this.breakCombo();
                             if (note.type === 'tap') note.active = false;
@@ -1069,42 +1221,53 @@
                     }
 
                     let tailTime = note.type === 'hold' ? note.hitTime + note.duration : note.hitTime;
-                    if (tailTime < currentTime - 0.2) {
-                        note.active = false; 
+                    if (tailTime < currentTime - missWindow) {
+                        note.active = false;
                     }
 
                     if (note.type === 'hold' && note.holdActive) {
                         if (this.lanesHeld[note.lane]) {
-                            this.score += (this.cantonaActive ? 4 : 2);
+                            // Time-based hold reward (~120pts/sec) so high-refresh screens don't score faster
+                            this.holdScoreBuffer += 120 * dtSec * (this.cantonaActive ? 2 : 1);
                             let proj = this.project(note.lane, this.hitLineZ);
                             if(Math.random() > 0.4) {
                                 this.spawnParticle(proj.x + (Math.random() - 0.5) * 20, proj.y, (Math.random() - 0.5) * 2, -Math.random() * 30 - 15, Math.random() * 4 + 2, '#ffffff');
                             }
-                            if (currentTime >= note.hitTime + note.duration) { 
-                                note.active = false; 
-                                this.createShockwave(note.lane); 
+                            if (currentTime >= note.hitTime + note.duration) {
+                                note.active = false;
+                                this.createShockwave(note.lane);
+                                triggerVibration(18);
                             }
-                        } else { 
-                            note.active = false; 
-                            this.breakCombo(); 
+                        } else {
+                            note.active = false;
+                            this.breakCombo();
                         }
                     }
                 }
 
+                const holdPts = Math.floor(this.holdScoreBuffer);
+                if (holdPts > 0) { this.score += holdPts; this.holdScoreBuffer -= holdPts; }
+
                 for(let i=0; i<this.particles.length; i++) {
                     let p = this.particles[i];
-                    if(p.active) { p.x += p.vx; p.y += p.vy; p.size *= 0.93; p.life -= 0.04; if(p.life <= 0) p.active = false; }
+                    if(p.active) {
+                        p.x += p.vx * f; p.y += p.vy * f;
+                        p.vy += p.gravity * dtSec;
+                        p.size *= Math.pow(0.93, f);
+                        p.life -= 2.4 * dtSec;
+                        if(p.life <= 0) p.active = false;
+                    }
                 }
                 for(let i=0; i<this.shockwaves.length; i++) {
                     let sw = this.shockwaves[i];
-                    if(sw.active) { sw.radius += 8; sw.life -= 0.06; if(sw.life <= 0) sw.active = false; }
+                    if(sw.active) { sw.radius += 480 * dtSec; sw.life -= 3.6 * dtSec; if(sw.life <= 0) sw.active = false; }
                 }
-                
-                for (let i=0; i<3; i++) { if (this.lanesHeld[i]) this.receptorGlow[i] = 1; else if (this.receptorGlow[i] > 0) this.receptorGlow[i] -= 0.15; }
+
+                for (let i=0; i<3; i++) { if (this.lanesHeld[i]) this.receptorGlow[i] = 1; else if (this.receptorGlow[i] > 0) this.receptorGlow[i] -= 9 * dtSec; }
             },
 
             draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.clearRect(0, 0, this.viewW, this.viewH);
                 ctx.save();
                 if (this.shakeIntensity > 0) {
                     ctx.translate((Math.random() - 0.5) * this.shakeIntensity, (Math.random() - 0.5) * this.shakeIntensity);
@@ -1120,9 +1283,9 @@
                     for(let i = 0; i < 5; i++) { bassSum += frequencyDataArray[i]; }
                     let bassEnergy = (bassSum / 5) / 255; 
 
-                    let targetBass = Math.pow(bassEnergy, 3.0); 
-                    if (targetBass > 0.35) { this.bassIntensity = targetBass; } 
-                    else { this.bassIntensity -= 0.08; } 
+                    let targetBass = Math.pow(bassEnergy, 3.0);
+                    if (targetBass > 0.35) { this.bassIntensity = targetBass; }
+                    else { this.bassIntensity -= 4.8 * this.dtSec; }
                     this.bassIntensity = Math.max(0, this.bassIntensity);
 
                     let vocalSum = 0;
@@ -1130,9 +1293,9 @@
                     for(let i = 4; i < 4 + vocalCount; i++) { vocalSum += frequencyDataArray[i]; }
                     let vocalEnergy = (vocalSum / vocalCount) / 255; 
                     
-                    let targetVocal = Math.pow(vocalEnergy, 2.0); 
-                    if (targetVocal > 0.25) { this.vocalIntensity = targetVocal; } 
-                    else { this.vocalIntensity -= 0.05; } 
+                    let targetVocal = Math.pow(vocalEnergy, 2.0);
+                    if (targetVocal > 0.25) { this.vocalIntensity = targetVocal; }
+                    else { this.vocalIntensity -= 3 * this.dtSec; }
                     this.vocalIntensity = Math.max(0, this.vocalIntensity);
 
                     let flashBass = this.bassIntensity * 0.55;
@@ -1145,54 +1308,78 @@
                         const colorGold = {r: 255, g: 215, b: 0};
 
                         if (flashBass > 0.01) {
-                            let gradLeft = ctx.createLinearGradient(0, 0, canvas.width * 0.35, 0);
+                            let gradLeft = ctx.createLinearGradient(0, 0, this.viewW * 0.35, 0);
                             gradLeft.addColorStop(0, `rgba(${colorRed.r}, ${colorRed.g}, ${colorRed.b}, ${flashBass})`);
                             gradLeft.addColorStop(1, `rgba(${colorRed.r}, ${colorRed.g}, ${colorRed.b}, 0)`);
-                            ctx.fillStyle = gradLeft; ctx.fillRect(0, 0, canvas.width * 0.35, canvas.height);
+                            ctx.fillStyle = gradLeft; ctx.fillRect(0, 0, this.viewW * 0.35, this.viewH);
 
-                            let gradRight = ctx.createLinearGradient(canvas.width, 0, canvas.width * 0.65, 0);
+                            let gradRight = ctx.createLinearGradient(this.viewW, 0, this.viewW * 0.65, 0);
                             gradRight.addColorStop(0, `rgba(${colorGreen.r}, ${colorGreen.g}, ${colorGreen.b}, ${flashBass})`);
                             gradRight.addColorStop(1, `rgba(${colorGreen.r}, ${colorGreen.g}, ${colorGreen.b}, 0)`);
-                            ctx.fillStyle = gradRight; ctx.fillRect(canvas.width * 0.65, 0, canvas.width * 0.35, canvas.height);
+                            ctx.fillStyle = gradRight; ctx.fillRect(this.viewW * 0.65, 0, this.viewW * 0.35, this.viewH);
                         }
 
                         if (flashVocal > 0.01) {
-                            let gradTop = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.4);
+                            let gradTop = ctx.createLinearGradient(0, 0, 0, this.viewH * 0.4);
                             gradTop.addColorStop(0, `rgba(${colorGold.r}, ${colorGold.g}, ${colorGold.b}, ${flashVocal})`);
                             gradTop.addColorStop(1, `rgba(${colorGold.r}, ${colorGold.g}, ${colorGold.b}, 0)`);
-                            ctx.fillStyle = gradTop; ctx.fillRect(0, 0, canvas.width, canvas.height * 0.4);
-                            
-                            let radialVocal = ctx.createRadialGradient(canvas.width/2, canvas.height*0.3, 0, canvas.width/2, canvas.height*0.3, canvas.width*0.4);
+                            ctx.fillStyle = gradTop; ctx.fillRect(0, 0, this.viewW, this.viewH * 0.4);
+
+                            let radialVocal = ctx.createRadialGradient(this.viewW/2, this.viewH*0.3, 0, this.viewW/2, this.viewH*0.3, this.viewW*0.4);
                             radialVocal.addColorStop(0, `rgba(${colorGold.r}, ${colorGold.g}, ${colorGold.b}, ${flashVocal * 0.5})`);
                             radialVocal.addColorStop(1, `rgba(0,0,0,0)`);
-                            ctx.fillStyle = radialVocal; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            ctx.fillStyle = radialVocal; ctx.fillRect(0, 0, this.viewW, this.viewH);
                         }
                         
                         ctx.globalCompositeOperation = 'source-over'; 
                     }
                 }
 
-                const strobe = document.getElementById('strobe-overlay');
-                const bgImg = document.getElementById('bg-image');
                 let pop = 1 + (this.bassIntensity * 0.025);
 
                 // Smoothed, capped strobe so Cantona Mode reads as an exciting glow rather than a
                 // hard flicker that snaps to raw bass data every frame - the old version could
                 // flash hard enough each beat to obscure incoming notes and cause misses.
                 let strobeTarget = (isMaxCantona && this.bassIntensity > 0.05) ? Math.min(this.bassIntensity * 0.18, 0.18) : 0;
-                this.strobeOpacity += (strobeTarget - this.strobeOpacity) * 0.12;
+                this.strobeOpacity += (strobeTarget - this.strobeOpacity) * Math.min(1, this.dtSec * 7.2);
                 if (this.strobeOpacity < 0.004) this.strobeOpacity = 0;
-                strobe.style.opacity = this.strobeOpacity;
+                domFX.strobe.style.opacity = this.strobeOpacity;
                 if (isMaxCantona && this.bassIntensity > 0.05) pop += 0.01;
-                bgImg.style.transform = `scale(${pop})`;
+                domFX.bgImg.style.transform = `scale(${pop})`;
 
                 if (this.multLevelUpEffect > 0) {
                     ctx.fillStyle = `rgba(255, 215, 0, ${this.multLevelUpEffect * 0.25})`;
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    this.multLevelUpEffect -= 0.04;
+                    ctx.fillRect(0, 0, this.viewW, this.viewH);
+                    this.multLevelUpEffect -= 2.4 * this.dtSec;
                 }
 
                 let isMaxMultiplier = this.multiplier >= 4;
+
+                // Perspective lane light-guides running from the horizon to each receptor,
+                // pulsing with the bass and brightening while a lane is held
+                const stageCfg = stages[currentStageIndex];
+                for (let i = 0; i < 3; i++) {
+                    const halfPct = 58 / this.viewW;
+                    const nearL = this.projectRaw(stageCfg.targetsX[i] - halfPct, this.hitLineZ);
+                    const nearR = this.projectRaw(stageCfg.targetsX[i] + halfPct, this.hitLineZ);
+                    const farL = this.projectRaw(stageCfg.targetsX[i] - halfPct, this.spawnZ);
+                    const farR = this.projectRaw(stageCfg.targetsX[i] + halfPct, this.spawnZ);
+                    const laneAlpha = 0.05 + this.bassIntensity * 0.09 + (this.lanesHeld[i] ? 0.08 : 0) + (this.cantonaActive ? 0.05 : 0);
+
+                    let laneGrad = ctx.createLinearGradient(0, farL.y, 0, nearL.y);
+                    laneGrad.addColorStop(0, `rgba(${this.laneColors[i].rgb}, 0)`);
+                    laneGrad.addColorStop(1, `rgba(${this.laneColors[i].rgb}, ${laneAlpha})`);
+                    ctx.fillStyle = laneGrad;
+                    ctx.beginPath();
+                    ctx.moveTo(farL.x, farL.y); ctx.lineTo(farR.x, farR.y);
+                    ctx.lineTo(nearR.x, nearR.y); ctx.lineTo(nearL.x, nearL.y);
+                    ctx.closePath(); ctx.fill();
+
+                    ctx.strokeStyle = `rgba(255,255,255,${0.04 + this.bassIntensity * 0.06})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.moveTo(farL.x, farL.y); ctx.lineTo(nearL.x, nearL.y); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(farR.x, farR.y); ctx.lineTo(nearR.x, nearR.y); ctx.stroke();
+                }
 
                 for (let i = 0; i < 3; i++) {
                     let proj = this.project(i, this.hitLineZ);
@@ -1294,13 +1481,30 @@
                     if (currentZ > this.spawnZ || currentZ < 10) return; 
 
                     let proj = this.project(note.lane, currentZ);
-                    let rx = 55 * proj.scale; let ry = 22 * proj.scale; 
+                    let rx = 55 * proj.scale; let ry = 22 * proj.scale;
                     let colors = this.laneColors[note.lane];
-                    let thickness = 18 * proj.scale; 
-                    
-                    ctx.globalAlpha = note.missed ? 0.3 : 1.0; 
+                    let thickness = 18 * proj.scale;
 
-                    ctx.fillStyle = colors.dark; 
+                    ctx.globalAlpha = note.missed ? 0.3 : 1.0;
+
+                    // Speed trail streaking back towards the horizon gives a real sense of motion
+                    if (!note.missed && note.type === 'tap') {
+                        let trailZ = Math.min(currentZ + 620, this.spawnZ);
+                        let trailProj = this.project(note.lane, trailZ);
+                        let wTrail = 55 * trailProj.scale * 0.55;
+                        let tGrad = ctx.createLinearGradient(proj.x, proj.y, trailProj.x, trailProj.y);
+                        tGrad.addColorStop(0, `rgba(${colors.rgb}, 0.30)`);
+                        tGrad.addColorStop(1, `rgba(${colors.rgb}, 0)`);
+                        ctx.fillStyle = tGrad;
+                        ctx.beginPath();
+                        ctx.moveTo(proj.x - rx * 0.55, proj.y);
+                        ctx.lineTo(proj.x + rx * 0.55, proj.y);
+                        ctx.lineTo(trailProj.x + wTrail, trailProj.y);
+                        ctx.lineTo(trailProj.x - wTrail, trailProj.y);
+                        ctx.closePath(); ctx.fill();
+                    }
+
+                    ctx.fillStyle = colors.dark;
                     ctx.beginPath(); ctx.ellipse(proj.x, proj.y + thickness, rx, ry, 0, 0, TWO_PI); ctx.fill();
                     ctx.beginPath();
                     ctx.moveTo(proj.x - rx, proj.y); ctx.lineTo(proj.x - rx, proj.y + thickness);
@@ -1330,11 +1534,14 @@
                     ctx.globalAlpha = 1.0; 
                 });
 
+                // Additive blending makes sparks and shockwaves glow instead of flat-painting
+                ctx.globalCompositeOperation = 'lighter';
+
                 for(let i=0; i<this.shockwaves.length; i++){
                     let sw = this.shockwaves[i];
                     if(sw.active) {
                         let proj = this.project(sw.lane, this.hitLineZ);
-                        ctx.strokeStyle = `rgba(255, 255, 255, ${sw.life})`; ctx.lineWidth = 6 * sw.life;
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${sw.life * 0.9})`; ctx.lineWidth = 6 * sw.life;
                         ctx.beginPath(); ctx.ellipse(proj.x, proj.y, sw.radius * 2, sw.radius * 0.8, 0, 0, TWO_PI); ctx.stroke();
                     }
                 }
@@ -1342,9 +1549,12 @@
                 for(let i=0; i<this.particles.length; i++) {
                     let p = this.particles[i];
                     if(p.active) {
+                        ctx.globalAlpha = Math.min(1, p.life);
                         ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TWO_PI); ctx.fill();
                     }
                 }
+                ctx.globalAlpha = 1.0;
+                ctx.globalCompositeOperation = 'source-over';
 
                 ctx.restore();
             },
@@ -1353,9 +1563,11 @@
                 if (!this.active) return;
                 this.animationId = requestAnimationFrame(() => this.loop());
                 
-                let now = performance.now(); 
-                let dt = now - this.lastTime; 
+                let now = performance.now();
+                let dt = now - this.lastTime;
                 this.lastTime = now;
+                if (dt > 100) dt = 100; // clamp tab-switch / GC spikes so nothing teleports
+                this.dtSec = dt / 1000;
 
                 this.frameCount++;
                 if (now - this.fpsTime >= 1000) {
@@ -1376,20 +1588,21 @@
                 const currentTime = this.getCurrentTime();
                 let hitNoteIndex = -1; let minTimeDiff = Infinity; let timeDiffRaw = 0;
 
+                const w = this.hitWindows;
                 for (let i = 0; i < this.beatmap.length; i++) {
                     let note = this.beatmap[i];
                     if (note.active && !note.holdActive && note.lane === laneIndex) {
-                        let diffRaw = note.hitTime - currentTime; 
+                        let diffRaw = note.hitTime - currentTime;
                         let diffAbs = Math.abs(diffRaw);
-                        if (diffAbs < 0.18 && diffAbs < minTimeDiff) { 
-                            minTimeDiff = diffAbs; timeDiffRaw = diffRaw; hitNoteIndex = i; 
+                        if (diffAbs < w.good && diffAbs < minTimeDiff) {
+                            minTimeDiff = diffAbs; timeDiffRaw = diffRaw; hitNoteIndex = i;
                         }
                     }
                 }
 
                 if (hitNoteIndex !== -1) {
                     let note = this.beatmap[hitNoteIndex];
-                    let quality = minTimeDiff < 0.08 ? 'perfect' : 'good';
+                    let quality = minTimeDiff < w.perfect ? 'perfect' : minTimeDiff < w.great ? 'great' : 'good';
                     let timingText = timeDiffRaw > 0.03 ? 'EARLY' : (timeDiffRaw < -0.03 ? 'LATE' : 'FLAWLESS');
 
                     if (note.type === 'tap') { note.active = false; this.registerHit(quality, laneIndex, timingText); } 
@@ -1401,6 +1614,7 @@
 
             registerHit(quality, laneIndex, timingText) {
                 if (quality === 'perfect') this.stats.perfect++;
+                else if (quality === 'great') this.stats.great++;
                 else this.stats.good++;
 
                 this.combo++; if (this.combo > this.maxCombo) this.maxCombo = this.combo;
@@ -1409,25 +1623,30 @@
 
                 if (this.multiplier > oldMult) {
                     this.multLevelUpEffect = 1.0;
+                    playSynthFX('multup');
+                    triggerVibration([10, 20, 10]);
                 }
 
                 let mult = this.cantonaActive ? this.multiplier * 2 : this.multiplier;
-                this.score += (quality === 'perfect' ? 50 : 25) * mult;
+                this.score += (quality === 'perfect' ? 50 : quality === 'great' ? 35 : 20) * mult;
 
-                if (quality === 'perfect' && !this.cantonaActive) {
-                    this.cantonaPower += 2;
+                if (!this.cantonaActive) {
+                    if (quality === 'perfect') this.cantonaPower += 2;
+                    else if (quality === 'great') this.cantonaPower += 1;
                     if (this.cantonaPower >= 100) { this.cantonaPower = 100; this.triggerCantonaMode(); }
                 }
 
-                ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive);
+                ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive, this.combo);
                 if(timingText !== '') ui.showFeedback(quality, timingText);
-                triggerVibration(quality === 'perfect' ? 12 : 8);
+                playSynthFX(quality);
+                triggerVibration(quality === 'perfect' ? 12 : quality === 'great' ? 9 : 6);
 
                 if (STREAK_MILESTONES.includes(this.combo)) { ui.showStreak(this.combo); triggerVibration([15, 30, 15]); }
 
                 let proj = this.project(laneIndex, this.hitLineZ);
-                let burstColor = quality === 'perfect' ? '#FFD700' : this.laneColors[laneIndex].rim;
-                for(let i=0; i<15; i++) this.spawnParticle(proj.x, proj.y, (Math.random()-0.5)*20, -(Math.random()*20+10), Math.random()*8+4, burstColor);
+                let burstColor = quality === 'perfect' ? '#FFD700' : quality === 'great' ? '#42a5f5' : this.laneColors[laneIndex].rim;
+                let burstCount = quality === 'perfect' ? 18 : 12;
+                for(let i=0; i<burstCount; i++) this.spawnParticle(proj.x, proj.y, (Math.random()-0.5)*20, -(Math.random()*20+10), Math.random()*8+4, burstColor);
                 this.createShockwave(laneIndex);
             },
 
@@ -1436,7 +1655,7 @@
                 if (this.combo > 0) ui.showFeedback('miss');
                 this.combo = 0; this.multiplier = 1;
                 this.shakeIntensity = 10;
-                ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive);
+                ui.updateHUD(this.score, this.multiplier, this.cantonaPower, this.cantonaActive, this.combo);
                 playSynthFX('miss');
                 triggerVibration([40, 30, 40]);
 
@@ -1455,8 +1674,9 @@
 
             triggerCantonaMode() {
                 this.cantonaActive = true;
-                document.getElementById('bg-image').classList.add('cantona-active-bg');
+                domFX.bgImg.classList.add('cantona-active-bg');
                 document.getElementById('cantona-overlay').style.opacity = '1';
+                playSynthFX('cantona');
                 triggerVibration([20, 40, 20, 40, 100]);
 
                 for(let i=0; i<3; i++) { 
@@ -1477,7 +1697,7 @@
             spawnParticle(x, y, vx, vy, size, colorStr) {
                 for(let i=0; i<this.particles.length; i++) {
                     if(!this.particles[i].active) {
-                        this.particles[i] = {active: true, x: x + (Math.random()-0.5)*40, y: y, vx: vx, vy: vy, size: size, life: 1, color: colorStr};
+                        this.particles[i] = {active: true, x: x + (Math.random()-0.5)*40, y: y, vx: vx, vy: vy, size: size, life: 1, color: colorStr, gravity: 40 + Math.random() * 30};
                         break;
                     }
                 }
@@ -1527,23 +1747,31 @@
             let lane = parseInt(zone.getAttribute('data-lane'));
             zone.addEventListener('touchstart', (e) => { e.preventDefault(); gameEngine.handleInputDown(lane); }, {passive: false});
             zone.addEventListener('touchend', (e) => { e.preventDefault(); gameEngine.handleInputUp(lane); }, {passive: false});
+            zone.addEventListener('touchcancel', (e) => { gameEngine.handleInputUp(lane); }, {passive: true});
             zone.addEventListener('mousedown', (e) => { e.preventDefault(); gameEngine.handleInputDown(lane); });
             zone.addEventListener('mouseup', (e) => { e.preventDefault(); gameEngine.handleInputUp(lane); });
             zone.addEventListener('mouseleave', (e) => { e.preventDefault(); gameEngine.handleInputUp(lane); });
         });
 
         window.addEventListener('keydown', (e) => {
-            if(!gameEngine.active || e.repeat) return; 
-            if(e.key === 'a' || e.key === 'ArrowLeft') gameEngine.handleInputDown(0);
-            if(e.key === 's' || e.key === 'ArrowDown') gameEngine.handleInputDown(1);
-            if(e.key === 'd' || e.key === 'ArrowRight') gameEngine.handleInputDown(2);
+            if(!gameEngine.active || e.repeat) return;
+            const k = e.key.toLowerCase();
+            if(k === 'a' || k === 'j' || e.key === 'ArrowLeft') gameEngine.handleInputDown(0);
+            if(k === 's' || k === 'k' || e.key === 'ArrowDown') gameEngine.handleInputDown(1);
+            if(k === 'd' || k === 'l' || e.key === 'ArrowRight') gameEngine.handleInputDown(2);
             if(e.key === 'Escape') { if(gameEngine.isPaused) gameEngine.resumeGame(); else gameEngine.pauseGame(); }
         });
         window.addEventListener('keyup', (e) => {
             if(!gameEngine.active) return;
-            if(e.key === 'a' || e.key === 'ArrowLeft') gameEngine.handleInputUp(0);
-            if(e.key === 's' || e.key === 'ArrowDown') gameEngine.handleInputUp(1);
-            if(e.key === 'd' || e.key === 'ArrowRight') gameEngine.handleInputUp(2);
+            const k = e.key.toLowerCase();
+            if(k === 'a' || k === 'j' || e.key === 'ArrowLeft') gameEngine.handleInputUp(0);
+            if(k === 's' || k === 'k' || e.key === 'ArrowDown') gameEngine.handleInputUp(1);
+            if(k === 'd' || k === 'l' || e.key === 'ArrowRight') gameEngine.handleInputUp(2);
+        });
+
+        // Auto-pause when the tab or app loses focus so the track never runs away from the player
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && gameEngine.active && !gameEngine.isPaused) gameEngine.pauseGame();
         });
 
     </script>
