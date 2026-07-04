@@ -115,6 +115,14 @@
         @keyframes stripeMove { 0% { background-position: 0 0; } 100% { background-position: 28px 0; } }
 
         .scroll-hide::-webkit-scrollbar { display: none; }
+        /* Scrollable full-screen menus: body locks touch gestures for gameplay, so any screen
+           that can overflow (game over, settings) must be its own touch-scrollable container */
+        .scroll-screen { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+        #pulse-vignette {
+            position: absolute; inset: 0; z-index: 4; pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,0.6) 100%);
+            opacity: 0.55; will-change: opacity;
+        }
         .list-fade-mask { -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%); mask-image: linear-gradient(to bottom, black 85%, transparent 100%); }
         .hud-top-bar { background: linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0) 100%); }
         
@@ -142,6 +150,7 @@
     <img id="bg-image" class="bg-image-layer" src="https://iili.io/C3BxcQI.jpg" alt="Stage Background" />
     <div id="strobe-overlay"></div>
     <div class="bg-overlay"></div>
+    <div id="pulse-vignette"></div>
     
     <div id="cantona-overlay" class="absolute inset-0 z-[5] opacity-0 transition-opacity duration-500 pointer-events-none bg-[radial-gradient(circle,transparent_20%,rgba(218,41,28,0.3)_80%,rgba(255,215,0,0.2)_100%)]"></div>
 
@@ -237,11 +246,12 @@
         </div>
 
         <!-- SETTINGS MENU -->
-        <div id="screen-settings" class="screen-fade-in hidden absolute inset-0 flex-col items-center justify-center glass-panel pointer-events-auto z-[60] px-6">
+        <div id="screen-settings" class="screen-fade-in hidden absolute inset-0 flex-col items-center glass-panel pointer-events-auto z-[60] px-6 scroll-screen">
             <button onclick="ui.toggleFullScreen()" class="fs-btn-glow absolute top-6 right-6 flex items-center gap-2 bg-[#FFD700]/15 border-2 border-[#FFD700] rounded-full px-4 py-2 text-[#FFD700] hover:bg-[#FFD700] hover:text-black active:scale-90 transition-all shadow-[0_0_20px_rgba(255,215,0,0.6)] animate-pulse">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
                 <span class="fs-text text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Full Screen</span>
             </button>
+            <div class="w-full flex flex-col items-center shrink-0 my-auto py-10">
             <h2 class="text-4xl font-black mb-8 text-gold-gradient uppercase tracking-wider drop-shadow-lg">Settings</h2>
             <div class="w-full max-w-sm flex flex-col gap-8 hud-glass p-8 mb-8">
                 <div class="w-full">
@@ -277,6 +287,7 @@
                 </div>
             </div>
             <button onclick="ui.saveSettingsAndExit()" class="bg-gray-800 border-2 border-gray-500 text-white px-12 py-4 rounded-full font-bold uppercase tracking-widest hover:border-[#FFD700] hover:text-[#FFD700] active:scale-95 transition-all shadow-[0_10px_25px_rgba(0,0,0,0.8)]">Save & Close</button>
+            </div>
         </div>
 
         <!-- MAIN MENU -->
@@ -328,11 +339,12 @@
         </div>
 
         <!-- GAME OVER -->
-        <div id="screen-gameover" class="screen-fade-in hidden absolute inset-0 flex-col items-center justify-center glass-panel pointer-events-auto z-50 px-4">
+        <div id="screen-gameover" class="screen-fade-in hidden absolute inset-0 flex-col items-center glass-panel pointer-events-auto z-50 px-4 scroll-screen">
             <div id="new-highscore-banner" class="hidden absolute top-0 w-full bg-gradient-to-r from-transparent via-[#FFD700] to-transparent text-black font-black text-center py-2 uppercase tracking-[0.3em] shadow-[0_0_30px_#FFD700] animate-pulse z-50">
                 New High Score!
             </div>
 
+            <div class="w-full flex flex-col items-center shrink-0 my-auto pt-10 pb-14">
             <h2 id="end-title" class="text-6xl font-black mb-1 text-[#FFD700] uppercase drop-shadow-[0_5px_30px_rgba(255,215,0,0.6)] mt-8 text-center leading-none">GIG OVER</h2>
             <p id="end-track-name" class="text-gray-300 mb-4 text-xs font-bold uppercase tracking-[0.3em] text-center px-4 mt-2">United Road</p>
             
@@ -375,9 +387,10 @@
             <div id="game-over-buttons" class="flex flex-col gap-4 w-full max-w-sm opacity-0 pointer-events-none transition-opacity duration-500">
                 <button onclick="gameEngine.restartGame()" class="w-full bg-gradient-to-b from-[#DA291C] to-[#8a1a12] border-2 border-[#FFD700] text-white py-4 rounded-xl text-lg font-black uppercase tracking-widest shadow-[0_5px_20px_rgba(218,41,28,0.6)] hover:brightness-110 active:scale-95 transition-all btn-shine">Play Again</button>
                 <div class="flex gap-4 w-full">
-                    <button onclick="ui.showStartMenu()" class="flex-1 bg-gray-800 border-2 border-gray-600 text-white py-4 rounded-xl text-sm font-black uppercase tracking-widest hover:border-gray-400 active:scale-95 transition-all shadow-lg">Hub</button>
+                    <button onclick="ui.showStartMenu()" class="flex-1 bg-gray-800 border-2 border-gray-600 text-white py-4 rounded-xl text-sm font-black uppercase tracking-widest hover:border-gray-400 active:scale-95 transition-all shadow-lg">Exit to Hub</button>
                     <button onclick="ui.showCareer()" class="hidden flex-1 bg-gradient-to-b from-[#00B140] to-[#007029] border-2 border-[#00ff5d] text-white py-4 rounded-xl text-sm font-black uppercase tracking-widest shadow-[0_5px_25px_rgba(0,177,64,0.6)] hover:brightness-110 active:scale-95 transition-all" id="end-career-btn">Continue</button>
                 </div>
+            </div>
             </div>
         </div>
     </div>
@@ -555,6 +568,7 @@
                 document.getElementById('bg-image').classList.remove('cantona-active-bg'); 
                 document.getElementById('cantona-overlay').style.opacity = '0';
                 document.getElementById('strobe-overlay').style.opacity = '0';
+                document.getElementById('pulse-vignette').style.opacity = '';
             },
             showStartMenu() { this.hideAll(); this.screens.start.classList.remove('hidden'); },
             
@@ -751,6 +765,7 @@
 
             showGameOver(stats, trackName, trackId, wonCareerMatch, isNewHighScore) {
                 this.hideAll(); this.screens.gameover.classList.remove('hidden'); this.screens.gameover.classList.add('flex');
+                this.screens.gameover.scrollTop = 0;
 
                 document.getElementById('end-score').innerText = stats.score; document.getElementById('end-combo').innerText = 'x' + stats.maxCombo;
                 document.getElementById('end-track-name').innerText = trackName;
@@ -784,7 +799,7 @@
                 setTimeout(() => {
                     btnContainer.style.opacity = '1';
                     btnContainer.style.pointerEvents = 'auto';
-                }, 1500);
+                }, 800);
             },
             
             updateHUD(score, multiplier, cantonaPower, cantonaActive, combo) {
@@ -872,7 +887,8 @@
             strobe: document.getElementById('strobe-overlay'),
             bgImg: document.getElementById('bg-image'),
             hudScore: document.getElementById('hud-score'),
-            hudProgress: document.getElementById('hud-progress')
+            hudProgress: document.getElementById('hud-progress'),
+            vignette: document.getElementById('pulse-vignette')
         };
 
         const gameEngine = {
@@ -893,8 +909,19 @@
             lanesHeld: [false, false, false], receptorGlow: [0, 0, 0],
             cantonaPower: 0, cantonaActive: false,
 
-            bassIntensity: 0, vocalIntensity: 0,
+            bassIntensity: 0, vocalIntensity: 0, midIntensity: 0, trebleIntensity: 0,
             multLevelUpEffect: 0, shakeIntensity: 0, strobeOpacity: 0,
+
+            // Beat engine: onset detection against a rolling bass-energy average lets every
+            // real kick in the song fire a synchronized pulse through lights, camera and notes
+            beatPulse: 0, beatCount: 0, lastBeatMs: 0, prevKick: 0,
+            energyHist: new Float32Array(48), energyIdx: 0, energyFill: 0,
+            camPunch: 0, lowPower: false,
+
+            spotlights: Array.from({length: 5}, (_, i) => ({ base: (i / 5) * Math.PI * 2, speed: 0.10 + Math.random() * 0.16, sway: 0.5 + Math.random() * 0.7, width: 0.07 + Math.random() * 0.06, phase: Math.random() * Math.PI * 2 })),
+            stars: Array.from({length: 90}, () => ({ ang: 0, dist: 0, speed: 1 })),
+            beatRings: Array.from({length: 6}, () => ({ active: false, radius: 0, life: 0 })),
+            embers: Array.from({length: 36}, () => ({ x: 0, y: 0, vy: 20, size: 2, drift: 0, hue: 0.5 })),
 
             laneColors: [
                 { core: '#00B140', rim: '#00ff5d', dark: '#005920', inner: '#b3ffcc', rgb: '0,177,64' },
@@ -1018,8 +1045,11 @@
                 this.cantonaPower = 0; this.cantonaActive = false;
                 this.displayScore = 0; this.holdScoreBuffer = 0;
 
-                this.bassIntensity = 0; this.vocalIntensity = 0;
+                this.bassIntensity = 0; this.vocalIntensity = 0; this.midIntensity = 0; this.trebleIntensity = 0;
                 this.multLevelUpEffect = 0; this.shakeIntensity = 0; this.strobeOpacity = 0;
+                this.beatPulse = 0; this.beatCount = 0; this.lastBeatMs = 0; this.prevKick = 0;
+                this.energyIdx = 0; this.energyFill = 0; this.camPunch = 0;
+                this.beatRings.forEach(r => r.active = false);
 
                 this.particles.forEach(p => p.active = false);
                 this.shockwaves.forEach(s => s.active = false);
@@ -1044,6 +1074,7 @@
 
                 this.generateBeatmap();
                 this.resize();
+                this.seedAmbientFX();
 
                 if (!this.track.audioSrc || this.track.audioSrc === "") {
                     this.beginPlay();
@@ -1118,6 +1149,7 @@
                 try { audioEl.pause(); audioEl.currentTime = 0; } catch(e){} 
                 ui.hidePause(); ui.controls.classList.add('hidden');
                 document.getElementById('strobe-overlay').style.opacity = '0';
+                document.getElementById('pulse-vignette').style.opacity = '';
                 document.getElementById('bg-image').style.transform = 'scale(1)';
                 document.getElementById('mult-container').classList.remove('primary-btn-glow');
             },
@@ -1234,6 +1266,13 @@
                 if (this.shakeIntensity > 0) {
                     ctx.translate((Math.random() - 0.5) * this.shakeIntensity, (Math.random() - 0.5) * this.shakeIntensity);
                 }
+                // Subtle punch-zoom on every beat so the whole scene "nods" with the kick drum
+                const camZoom = 1 + this.camPunch * 0.010;
+                if (camZoom > 1.0005) {
+                    ctx.translate(this.viewW / 2, this.viewH / 2);
+                    ctx.scale(camZoom, camZoom);
+                    ctx.translate(-this.viewW / 2, -this.viewH / 2);
+                }
                 const currentTime = this.getCurrentTime();
                 let isMaxCantona = this.cantonaActive && this.multiplier >= 4;
                 const TWO_PI = Math.PI * 2;
@@ -1259,6 +1298,40 @@
                     if (targetVocal > 0.25) { this.vocalIntensity = targetVocal; }
                     else { this.vocalIntensity -= 3 * this.dtSec; }
                     this.vocalIntensity = Math.max(0, this.vocalIntensity);
+
+                    // Mid band (melody/vocals body) drives spotlights and embers
+                    let midSum = 0;
+                    for(let i = 8; i < 48; i++) { midSum += frequencyDataArray[i]; }
+                    let targetMid = Math.min(1, Math.pow((midSum / 40) / 255 * 1.8, 1.5));
+                    if (targetMid > this.midIntensity) this.midIntensity = targetMid;
+                    else this.midIntensity = Math.max(0, this.midIntensity - 2.6 * this.dtSec);
+
+                    // Treble band (hi-hats/sparkle) adds shimmer to the starfield
+                    let trebSum = 0;
+                    for(let i = 48; i < 110; i++) { trebSum += frequencyDataArray[i]; }
+                    let targetTreb = Math.min(1, Math.pow((trebSum / 62) / 255 * 2.2, 1.5));
+                    if (targetTreb > this.trebleIntensity) this.trebleIntensity = targetTreb;
+                    else this.trebleIntensity = Math.max(0, this.trebleIntensity - 3 * this.dtSec);
+
+                    // Beat onset via spectral flux on the kick band: a sudden JUMP in low-end
+                    // energy (not just loud sustained bass) marks a drum hit. Every visual
+                    // effect listens to this one pulse so the whole stage moves as one.
+                    const kick = (frequencyDataArray[0] + frequencyDataArray[1] + frequencyDataArray[2]) / (3 * 255);
+                    const kickFlux = kick - this.prevKick;
+                    this.prevKick = kick;
+                    this.energyHist[this.energyIdx] = kick;
+                    this.energyIdx = (this.energyIdx + 1) % this.energyHist.length;
+                    if (this.energyFill < this.energyHist.length) this.energyFill++;
+                    let avgE = 0;
+                    for (let i = 0; i < this.energyFill; i++) avgE += this.energyHist[i];
+                    avgE /= this.energyFill;
+                    const nowMs = performance.now();
+                    const minBeatGapMs = 60000 / (this.track.bpm * 2.2);
+                    if (this.energyFill > 10 && kick > 0.1 && (kickFlux > 0.04 || kick > avgE * 1.35) && nowMs - this.lastBeatMs > minBeatGapMs) {
+                        this.lastBeatMs = nowMs; this.beatCount++;
+                        this.beatPulse = 1; this.camPunch = 1;
+                        this.spawnBeatRing();
+                    }
 
                     let flashBass = this.bassIntensity * 0.55;
                     let flashVocal = this.vocalIntensity * 0.45;
@@ -1297,17 +1370,31 @@
                     }
                 }
 
-                let pop = 1 + (this.bassIntensity * 0.025);
+                if (this.beatPulse > 0) this.beatPulse = Math.max(0, this.beatPulse - 3.2 * this.dtSec);
+                if (this.camPunch > 0) this.camPunch = Math.max(0, this.camPunch - 5.5 * this.dtSec);
 
-                // Smoothed, capped strobe so Cantona Mode reads as an exciting glow rather than a
-                // hard flicker that snaps to raw bass data every frame - the old version could
-                // flash hard enough each beat to obscure incoming notes and cause misses.
-                let strobeTarget = (isMaxCantona && this.bassIntensity > 0.05) ? Math.min(this.bassIntensity * 0.18, 0.18) : 0;
-                this.strobeOpacity += (strobeTarget - this.strobeOpacity) * Math.min(1, this.dtSec * 7.2);
+                // Concert stage FX layer - all of it listens to the live audio bands
+                const stageVpX = this.viewW * stages[currentStageIndex].vpX;
+                const stageVpY = this.viewH * stages[currentStageIndex].vpY;
+                this.drawSpotlights(stageVpX, stageVpY);
+                this.drawHorizonEQ(stageVpX, stageVpY);
+                this.drawBeatRings(stageVpX, stageVpY);
+                this.drawStarfield(stageVpX, stageVpY);
+
+                let pop = 1 + (this.bassIntensity * 0.022) + (this.beatPulse * 0.016);
+
+                // Beat-locked strobe: a soft flash on every detected kick, amplified in Cantona
+                // Mode, smoothed and capped so it excites the frame without hiding the notes.
+                let strobeTarget = this.beatPulse * (this.cantonaActive ? 0.13 : 0.05);
+                if (isMaxCantona && this.bassIntensity > 0.05) strobeTarget += Math.min(this.bassIntensity * 0.10, 0.10);
+                this.strobeOpacity += (strobeTarget - this.strobeOpacity) * Math.min(1, this.dtSec * 9);
                 if (this.strobeOpacity < 0.004) this.strobeOpacity = 0;
                 domFX.strobe.style.opacity = this.strobeOpacity;
                 if (isMaxCantona && this.bassIntensity > 0.05) pop += 0.01;
                 domFX.bgImg.style.transform = `scale(${pop})`;
+
+                // Vignette breathes open with the bass so the whole frame swells with the music
+                domFX.vignette.style.opacity = Math.max(0.2, 0.6 - this.bassIntensity * 0.3 - this.beatPulse * 0.12);
 
                 if (this.multLevelUpEffect > 0) {
                     ctx.fillStyle = `rgba(255, 215, 0, ${this.multLevelUpEffect * 0.25})`;
@@ -1326,7 +1413,7 @@
                     const nearR = this.projectRaw(stageCfg.targetsX[i] + halfPct, this.hitLineZ);
                     const farL = this.projectRaw(stageCfg.targetsX[i] - halfPct, this.spawnZ);
                     const farR = this.projectRaw(stageCfg.targetsX[i] + halfPct, this.spawnZ);
-                    const laneAlpha = 0.05 + this.bassIntensity * 0.09 + (this.lanesHeld[i] ? 0.08 : 0) + (this.cantonaActive ? 0.05 : 0);
+                    const laneAlpha = 0.05 + this.bassIntensity * 0.09 + this.beatPulse * 0.05 + (this.lanesHeld[i] ? 0.08 : 0) + (this.cantonaActive ? 0.05 : 0);
 
                     let laneGrad = ctx.createLinearGradient(0, farL.y, 0, nearL.y);
                     laneGrad.addColorStop(0, `rgba(${this.laneColors[i].rgb}, 0)`);
@@ -1367,6 +1454,15 @@
                         } else {
                             ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 2 * proj.scale; ctx.beginPath(); ctx.ellipse(proj.x, proj.y, rx, ry, 0, 0, TWO_PI); ctx.stroke();
                         }
+                    }
+
+                    // Receptors "clap" on every beat: a colored ring expands outward as the pulse fades
+                    if (this.beatPulse > 0.03) {
+                        const bp = this.beatPulse;
+                        const ex = 1 + (1 - bp) * 0.45;
+                        ctx.strokeStyle = `rgba(${this.laneColors[i].rgb}, ${bp * 0.35})`;
+                        ctx.lineWidth = 2.5 * proj.scale;
+                        ctx.beginPath(); ctx.ellipse(proj.x, proj.y, rx * ex, ry * ex, 0, 0, TWO_PI); ctx.stroke();
                     }
                 }
 
@@ -1443,7 +1539,8 @@
                     if (currentZ > this.spawnZ || currentZ < 10) return; 
 
                     let proj = this.project(note.lane, currentZ);
-                    let rx = 55 * proj.scale; let ry = 22 * proj.scale;
+                    const noteBeat = 1 + this.beatPulse * 0.045;
+                    let rx = 55 * proj.scale * noteBeat; let ry = 22 * proj.scale * noteBeat;
                     let colors = this.laneColors[note.lane];
                     let thickness = 18 * proj.scale;
 
@@ -1515,6 +1612,7 @@
                         ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TWO_PI); ctx.fill();
                     }
                 }
+                if (!this.lowPower) this.drawEmbers();
                 ctx.globalAlpha = 1.0;
                 ctx.globalCompositeOperation = 'source-over';
 
@@ -1534,6 +1632,8 @@
                 this.frameCount++;
                 if (now - this.fpsTime >= 1000) {
                     document.getElementById('hud-fps').innerText = this.frameCount + ' FPS';
+                    // Auto quality: if a device can't hold ~40fps, permanently shed the costliest FX
+                    if (!this.lowPower && this.frameCount < 40 && this.elapsedMs > 4000) this.lowPower = true;
                     this.frameCount = 0; this.fpsTime = now;
                 }
 
@@ -1585,6 +1685,7 @@
 
                 if (this.multiplier > oldMult) {
                     this.multLevelUpEffect = 1.0;
+                    this.camPunch = 1;
                     triggerVibration([10, 20, 10]);
                 }
 
@@ -1634,6 +1735,8 @@
 
             triggerCantonaMode() {
                 this.cantonaActive = true;
+                this.beatPulse = 1; this.camPunch = 1;
+                this.spawnBeatRing();
                 domFX.bgImg.classList.add('cantona-active-bg');
                 document.getElementById('cantona-overlay').style.opacity = '1';
                 triggerVibration([20, 40, 20, 40, 100]);
@@ -1660,6 +1763,152 @@
                         break;
                     }
                 }
+            },
+
+            // ---- Music-reactive concert stage FX ----
+
+            seedAmbientFX() {
+                const maxR = Math.max(this.viewW, this.viewH) * 0.8;
+                this.stars.forEach(s => {
+                    s.ang = Math.random() * Math.PI * 2;
+                    s.dist = 20 + Math.random() * maxR;
+                    s.speed = 0.6 + Math.random() * 1.4;
+                });
+                this.embers.forEach(em => {
+                    em.x = Math.random() * this.viewW; em.y = Math.random() * this.viewH;
+                    em.vy = 12 + Math.random() * 26; em.size = 1 + Math.random() * 2.2;
+                    em.drift = Math.random() * Math.PI * 2; em.hue = Math.random();
+                });
+            },
+
+            spawnBeatRing() {
+                for (let i = 0; i < this.beatRings.length; i++) {
+                    if (!this.beatRings[i].active) { this.beatRings[i] = { active: true, radius: 14, life: 1 }; break; }
+                }
+            },
+
+            // Volumetric beams sweeping out of the vanishing point like real stage rigging.
+            // Their brightness rides the mid band (melody) and they flare wider on each beat.
+            drawSpotlights(vpX, vpY) {
+                const energy = this.midIntensity * 0.75 + this.beatPulse * 0.35 + (this.cantonaActive ? 0.25 : 0);
+                if (energy < 0.03) return;
+                const R = Math.max(this.viewW, this.viewH) * 1.25;
+                const t = performance.now() / 1000;
+                const speedMult = this.cantonaActive ? 2.2 : 1;
+                const beamColors = this.cantonaActive
+                    ? ['255,215,0', '255,215,0', '255,235,120', '255,215,0', '255,235,120']
+                    : ['255,215,0', '218,41,28', '0,177,64', '255,255,255', '218,41,28'];
+                const alpha = Math.min(0.11, 0.02 + energy * 0.10);
+                ctx.globalCompositeOperation = 'lighter';
+                for (let i = 0; i < this.spotlights.length; i++) {
+                    const sp = this.spotlights[i];
+                    const ang = sp.base + t * sp.speed * speedMult + Math.sin(t * 0.65 + sp.phase) * sp.sway;
+                    const w = sp.width * (1 + this.beatPulse * 0.5);
+                    const grad = ctx.createRadialGradient(vpX, vpY, 0, vpX, vpY, R);
+                    grad.addColorStop(0, `rgba(${beamColors[i]}, ${alpha})`);
+                    grad.addColorStop(0.7, `rgba(${beamColors[i]}, ${alpha * 0.4})`);
+                    grad.addColorStop(1, `rgba(${beamColors[i]}, 0)`);
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.moveTo(vpX, vpY);
+                    ctx.lineTo(vpX + Math.cos(ang - w) * R, vpY + Math.sin(ang - w) * R);
+                    ctx.lineTo(vpX + Math.cos(ang + w) * R, vpY + Math.sin(ang + w) * R);
+                    ctx.closePath(); ctx.fill();
+                }
+                ctx.globalCompositeOperation = 'source-over';
+            },
+
+            // Live spectrum analyzer built into the horizon line - a skyline of light that
+            // dances with the actual frequencies of the song, mirrored around the stage center
+            drawHorizonEQ(vpX, vpY) {
+                const barCount = 14;
+                const half = this.viewW * 0.46;
+                const barW = Math.max(3, half / barCount * 0.42);
+                const maxH = this.viewH * 0.11;
+                ctx.globalCompositeOperation = 'lighter';
+                for (let i = 0; i < barCount; i++) {
+                    let v = frequencyDataArray[2 + i * 4] / 255;
+                    v = v * v;
+                    if (v < 0.02) continue;
+                    const h = 4 + v * maxH * (1 + this.beatPulse * 0.35);
+                    const fade = 1 - (i / barCount) * 0.55;
+                    const col = this.laneColors[i % 3].rgb;
+                    const off = (i + 0.75) / barCount * half;
+                    ctx.fillStyle = `rgba(${col}, ${(0.10 + v * 0.30) * fade})`;
+                    ctx.fillRect(vpX + off - barW / 2, vpY - h, barW, h);
+                    ctx.fillRect(vpX - off - barW / 2, vpY - h, barW, h);
+                    if (!this.lowPower) {
+                        // Faint reflection below the horizon sells the "wet pitch" look
+                        ctx.fillStyle = `rgba(${col}, ${(0.05 + v * 0.12) * fade})`;
+                        ctx.fillRect(vpX + off - barW / 2, vpY, barW, h * 0.4);
+                        ctx.fillRect(vpX - off - barW / 2, vpY, barW, h * 0.4);
+                    }
+                }
+                ctx.globalCompositeOperation = 'source-over';
+            },
+
+            // Golden shockwave rippling across the pitch plane on every kick drum hit
+            drawBeatRings(vpX, vpY) {
+                ctx.globalCompositeOperation = 'lighter';
+                for (let i = 0; i < this.beatRings.length; i++) {
+                    const ring = this.beatRings[i];
+                    if (!ring.active) continue;
+                    ring.radius += this.viewW * 1.1 * this.dtSec;
+                    ring.life -= 2.2 * this.dtSec;
+                    if (ring.life <= 0) { ring.active = false; continue; }
+                    ctx.strokeStyle = `rgba(255, 215, 0, ${ring.life * 0.28})`;
+                    ctx.lineWidth = 1.5 + ring.life * 2.5;
+                    ctx.beginPath(); ctx.ellipse(vpX, vpY, ring.radius, ring.radius * 0.42, 0, 0, Math.PI * 2); ctx.stroke();
+                }
+                ctx.globalCompositeOperation = 'source-over';
+            },
+
+            // Warp-speed light specks streaming out of the horizon - their velocity is driven
+            // by the bass so the sense of speed literally surges with the music
+            drawStarfield(vpX, vpY) {
+                const maxR = Math.max(this.viewW, this.viewH) * 0.8;
+                const drive = 0.25 + this.bassIntensity * 2.4 + this.beatPulse * 1.1 + (this.cantonaActive ? 1.3 : 0);
+                const alphaBase = 0.10 + this.midIntensity * 0.25 + this.trebleIntensity * 0.20 + this.beatPulse * 0.15;
+                const count = this.lowPower ? 45 : this.stars.length;
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.lineWidth = 1.2;
+                for (let i = 0; i < count; i++) {
+                    const s = this.stars[i];
+                    const move = s.dist * drive * s.speed * this.dtSec + 14 * this.dtSec;
+                    s.dist += move;
+                    if (s.dist > maxR) {
+                        s.ang = Math.random() * Math.PI * 2;
+                        s.dist = 25 + Math.random() * 60;
+                        s.speed = 0.6 + Math.random() * 1.4;
+                        continue;
+                    }
+                    const cosA = Math.cos(s.ang), sinA = Math.sin(s.ang);
+                    const px = vpX + cosA * s.dist, py = vpY + sinA * s.dist;
+                    const trail = Math.min(60, 4 + move * 6);
+                    ctx.strokeStyle = `rgba(255, 245, 220, ${Math.min(0.55, (s.dist / maxR) * alphaBase * 2)})`;
+                    ctx.beginPath();
+                    ctx.moveTo(px - cosA * trail, py - sinA * trail);
+                    ctx.lineTo(px, py);
+                    ctx.stroke();
+                }
+                ctx.globalCompositeOperation = 'source-over';
+            },
+
+            // Slow-rising embers filling the air like a night-match atmosphere; they glow
+            // brighter as the melody swells and shiver on each beat
+            drawEmbers() {
+                const glow = 0.10 + this.midIntensity * 0.45 + this.beatPulse * 0.20;
+                const t = performance.now() / 1000;
+                for (let i = 0; i < this.embers.length; i++) {
+                    const em = this.embers[i];
+                    em.y -= em.vy * this.dtSec * (1 + this.midIntensity * 1.5);
+                    em.x += Math.sin(t * 0.8 + em.drift) * 14 * this.dtSec;
+                    if (em.y < -12) { em.y = this.viewH + 12; em.x = Math.random() * this.viewW; }
+                    ctx.globalAlpha = Math.min(0.8, glow * (0.5 + em.hue * 0.8));
+                    ctx.fillStyle = em.hue > 0.55 ? '#FFD700' : (em.hue > 0.25 ? '#ff6a5e' : '#ffffff');
+                    ctx.beginPath(); ctx.arc(em.x, em.y, em.size * (1 + this.beatPulse * 0.4), 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.globalAlpha = 1;
             },
 
             endGame() {
